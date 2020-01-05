@@ -27,12 +27,15 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       Element element, ConstantReader annotation, String sourceUri) {
     if (element.kind != ElementKind.CLASS) return gBeanMap;
     ConstantReader from = annotation.peek("needAssignableFrom");
+//    print(
+//        "check : ${from.listValue.map((e) => e.toTypeValue()).every((c) => TypeChecker.fromStatic(c).isAssignableFrom(element))}");
     if (!from.isNull &&
         from.isList &&
         from.listValue.isNotEmpty &&
-        !TypeChecker.any(from.listValue
-                .map((f) => TypeChecker.fromStatic(f.toTypeValue())))
-            .isAssignableFrom(element)) return gBeanMap;
+        !from.listValue
+            .map((e) => e.toTypeValue())
+            .every((c) => TypeChecker.fromStatic(c).isAssignableFrom(element)))
+      return gBeanMap;
 
     String clazz = element.displayName;
     String uri = annotation.peek('uri').stringValue;
