@@ -1,0 +1,20 @@
+name: bean_factory
+description: Bean factory core libraries.
+version: 1.0.0
+# homepage: https://www.example.com
+author: anyamming <anyaming0@gmail.com>
+
+environment:
+  sdk: '>=2.5.0 <3.0.0'
+
+#dependencies:
+#  path: ^1.6.0
+
+dependencies:
+#  flutter:
+#    sdk: flutter
+
+dev_dependencies:
+
+#flutter:
+#  uses-material-design: true
