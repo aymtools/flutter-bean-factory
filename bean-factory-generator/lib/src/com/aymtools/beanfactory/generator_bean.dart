@@ -42,9 +42,16 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
 
     String tag = annotation.peek('tag').stringValue;
     int ext = annotation.peek('ext').intValue;
+    List<String> tagList = annotation.peek('tagList').listValue.isEmpty
+        ? []
+        : annotation.peek('tagList').listValue.map((v) => v.toStringValue());
+    List<int> extList = annotation.peek('extList').listValue.isEmpty
+        ? []
+        : annotation.peek('extList').listValue.map((v) => v.toIntValue());
+//    List<String> tagList = [];
+//    List<int> extList = [];
 
     String genName = annotation.peek('keyGen').objectValue.type.name;
-//    print("$sourceUri : genClassName:$genName");
     KeyGen keyGen = BeanFactoryGenerator.keyGens[genName];
     if (keyGen == null) {
       keyGen = KeyGenByClassName();
@@ -65,6 +72,8 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
             .value,
         tag,
         ext,
+        tagList,
+        extList,
         (element as ClassElement),
         annotation);
 
@@ -79,7 +88,7 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
     return gBeanMap;
   }
 
-  void _parseGBeanParams(GBean routePage, ClassElement element) {
+  void _parseGBeanParams(GBean gBean, ClassElement element) {
 //    if (element.constructors.length == 1 &&
 //        element.constructors[0].parameters.length == 0) return;
 
@@ -123,12 +132,12 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
 //          GBeanConstructor gbcDEF =
 //              ;
 //          gbcDEF.params = gbc.params;
-          routePage.constructors.add(new Pair(
+          gBean.constructors.add(new Pair(
               constructorName,
               GBeanConstructor(constructorName, constructorName)
                 ..params = gbc.params));
         }
-        routePage.constructors.add(new Pair(keyConstructorName, gbc));
+        gBean.constructors.add(new Pair(keyConstructorName, gbc));
       }
     });
   }
@@ -137,14 +146,13 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
 class GBeanCreatorBySysGenerator {
   String generateBeanSwitchConstructorInstance(GBean gBean) {
     StringBuffer stringBuffer = StringBuffer();
-    stringBuffer.writeln("  switch (namedConstructorInRouter) {");
+    stringBuffer.writeln("  switch (namedConstructorInUri) {");
     gBean.constructors.forEach((pair) {
       GBeanConstructor constructor = pair.value;
 
       String newBeanCMD =
           "${gBean.typeAsStr}.${gBean.typeName}${'' == constructor.namedConstructorInEntity ? '' : '.${constructor.namedConstructorInEntity}'}";
-      stringBuffer
-          .writeln("    case '${constructor.namedConstructorInRouter}' :");
+      stringBuffer.writeln("    case '${constructor.namedConstructorInUri}' :");
       stringBuffer.writeln("");
       List<String> gpsccnp =
           _generateBeanSwitchConstructorCheckNumParamsInstance(

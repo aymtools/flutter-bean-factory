@@ -18,7 +18,7 @@ class ExportLibGenerator extends GeneratorForAnnotation<FactoryLibExport> {
   }
 
   Future<String> _parseExportFactory(
-      String exportRouterUri, BuildStep buildStep) async {
+      String exportBeanFactoryUri, BuildStep buildStep) async {
     String package = buildStep.inputId.package;
     var libExportFile = File('lib/$package.dart');
     if (libExportFile.existsSync()) {
@@ -26,7 +26,7 @@ class ExportLibGenerator extends GeneratorForAnnotation<FactoryLibExport> {
       var lib = await buildStep.resolver.libraryFor(assetId);
       if (lib != null) {
         String libContent = lib.source.contents.data;
-        libContent += _genExportRouter(package, exportRouterUri, lib);
+        libContent += _genExportBeanFactory(package, exportBeanFactoryUri, lib);
         libExportFile.writeAsStringSync(libContent);
       } else {
         print("${libExportFile.path} is not lib");
@@ -34,7 +34,7 @@ class ExportLibGenerator extends GeneratorForAnnotation<FactoryLibExport> {
       }
     } else {
       String libContent = _genLibName(package) +
-          _genExportRouter(package, exportRouterUri, null);
+          _genExportBeanFactory(package, exportBeanFactoryUri, null);
       libExportFile.writeAsStringSync(libContent);
     }
     return null;
@@ -44,8 +44,8 @@ class ExportLibGenerator extends GeneratorForAnnotation<FactoryLibExport> {
     return "library $package;\n";
   }
 
-  String _genExportRouter(
-      String package, String exportRouterUri, LibraryElement lib) {
+  String _genExportBeanFactory(
+      String package, String exportBeanUri, LibraryElement lib) {
     List<String> le = lib == null
         ? []
         : lib.exportedLibraries.map((l) => l.source.uri.toString()).toList();
@@ -56,12 +56,12 @@ class ExportLibGenerator extends GeneratorForAnnotation<FactoryLibExport> {
 //        .where((i) => !i.startsWith("package:flutter"))
         .where((i) => !le.contains(i))
         .where((i) => !i.endsWith(".aym.dart"))
-        .where((i) => i != exportRouterUri)
+        .where((i) => i != exportBeanUri)
 //        .where((i) => i.startsWith("package:$package"))
         .map((i) => "export '${i}';\n")
         .fold("", (i, n) => i + n);
-    if (!le.contains(exportRouterUri)) {
-      result += "export '${exportRouterUri}';\n";
+    if (!le.contains(exportBeanUri)) {
+      result += "export '${exportBeanUri}';\n";
     }
     return result;
   }

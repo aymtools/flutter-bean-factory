@@ -12,6 +12,9 @@ class GBean {
   final String tag;
   final int ext;
 
+  final List<String> tagList;
+  final List<int> extList;
+
   final ClassElement element;
   final ConstantReader annotation;
 
@@ -25,21 +28,21 @@ class GBean {
   List<Pair<String, GBeanConstructor>> constructors = [];
 
   GBean(this.uri, this.typeName, this.sourceUri, this.typeAsStr, this.tag,
-      this.ext, this.element, this.annotation);
+      this.ext, this.tagList, this.extList, this.element, this.annotation);
 }
 
 class GBeanConstructor {
-  String namedConstructorInRouter;
+  String namedConstructorInUri;
   String namedConstructorInEntity;
 
   GBeanConstructor(
-      this.namedConstructorInRouter, this.namedConstructorInEntity);
+      this.namedConstructorInUri, this.namedConstructorInEntity);
 
   List<Pair<String, GBeanCreateParam>> params = [];
 
-  String get namedConstructor => namedConstructorInRouter == ""
+  String get namedConstructor => namedConstructorInUri == ""
       ? namedConstructorInEntity
-      : namedConstructorInRouter;
+      : namedConstructorInUri;
 
   bool get canCreateForNoParams {
     if (params.length == 0) return true;

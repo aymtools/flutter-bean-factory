@@ -36,27 +36,27 @@ class BeanFactory {
 
       Map<String, dynamic> queryParameters = u.queryParameters;
       Map<String, List<String>> queryParametersAll = u.queryParametersAll;
-      String namedConstructorInRouter = "";
+      String namedConstructorInUri = "";
       if (pathSegments.length > 0) {
         String lastPathS = pathSegments[pathSegments.length - 1];
         int lastPathSF = lastPathS.lastIndexOf(".");
         if(lastPathSF > -1){
-          namedConstructorInRouter=lastPathS.substring(lastPathSF + 1);
+          namedConstructorInUri=lastPathS.substring(lastPathSF + 1);
           String lastPathRe = lastPathS.substring(0, lastPathSF);
           pathSegments = List.from(pathSegments, growable: false);
           pathSegments[pathSegments.length - 1] = lastPathRe;
           u = u.replace(pathSegments: pathSegments);
         }else{
-          namedConstructorInRouter = "";
+          namedConstructorInUri = "";
         }
       } else {
-        //如果是如 router://test.named 也可以尝试进行解析  但如 router://xxxx.test.named 为了安全起见 不解析 最好遵照uri的标准用法
+        //如果是如 factory://test.named 也可以尝试进行解析  但如 factory://xxxx.test.named 为了安全起见 不解析 最好遵照uri的标准用法
         if (u.hasAuthority &&
             u.authority.indexOf(":") == -1 &&
             u.authority.indexOf(".") == u.authority.lastIndexOf(".")) {
           String authority = u.authority;
           int ni = authority.lastIndexOf(".");
-          namedConstructorInRouter = ni > -1 ? authority.substring(ni + 1) : "";
+          namedConstructorInUri = ni > -1 ? authority.substring(ni + 1) : "";
           String newAuthority =
               ni > -1 ? authority.substring(0, ni) : authority;
           u = u.replace(host: newAuthority);
@@ -88,11 +88,11 @@ class BeanFactory {
 
       if (result == null) {
         result = _createBeanInstanceByCustomCreator(
-            uri, namedConstructorInRouter, mapParam, objParam);
+            uri, namedConstructorInUri, mapParam, objParam);
       }
       if (result == null) {
         result = _createBeanInstanceBySysCreator(
-            uri, namedConstructorInRouter, mapParam, objParam);
+            uri, namedConstructorInUri, mapParam, objParam);
       }
       return result;
     } catch (e) {
@@ -104,27 +104,27 @@ class BeanFactory {
   String getPageUri(Uri u) {
     String uri;
     List<String> pathSegments = u.pathSegments;
-    String namedConstructorInRouter = "";
+    String namedConstructorInUri = "";
     if (pathSegments.length > 0) {
       String lastPathS = pathSegments[pathSegments.length - 1];
       int lastPathSF = lastPathS.lastIndexOf(".");
       if (lastPathSF > -1) {
-        namedConstructorInRouter = lastPathS.substring(lastPathSF + 1);
+        namedConstructorInUri = lastPathS.substring(lastPathSF + 1);
         String lastPathRe = lastPathS.substring(0, lastPathSF);
         pathSegments = List.from(pathSegments, growable: false);
         pathSegments[pathSegments.length - 1] = lastPathRe;
         u = u.replace(pathSegments: pathSegments);
       } else {
-        namedConstructorInRouter = "";
+        namedConstructorInUri = "";
       }
     } else {
-      //如果是如 router://test.named 也可以尝试进行解析  但如 router://xxxx.test.named 为了安全起见 不解析 最好遵照uri的标准用法
+      //如果是如 factory://test.named 也可以尝试进行解析  但如 factory://xxxx.test.named 为了安全起见 不解析 最好遵照uri的标准用法
       if (u.hasAuthority &&
           u.authority.indexOf(":") == -1 &&
           u.authority.indexOf(".") == u.authority.lastIndexOf(".")) {
         String authority = u.authority;
         int ni = authority.lastIndexOf(".");
-        namedConstructorInRouter = ni > -1 ? authority.substring(ni + 1) : "";
+        namedConstructorInUri = ni > -1 ? authority.substring(ni + 1) : "";
         String newAuthority = ni > -1 ? authority.substring(0, ni) : authority;
         u = u.replace(host: newAuthority);
       }
@@ -140,40 +140,40 @@ class BeanFactory {
   }
   String getNamedConstructorInUri(Uri u) {
     List<String> pathSegments = u.pathSegments;
-    String namedConstructorInRouter = "";
+    String namedConstructorInUri = "";
     if (pathSegments.length > 0) {
       String lastPathS = pathSegments[pathSegments.length - 1];
       int lastPathSF = lastPathS.lastIndexOf(".");
       if (lastPathSF > -1) {
-        namedConstructorInRouter = lastPathS.substring(lastPathSF + 1);
+        namedConstructorInUri = lastPathS.substring(lastPathSF + 1);
         String lastPathRe = lastPathS.substring(0, lastPathSF);
         pathSegments = List.from(pathSegments, growable: false);
         pathSegments[pathSegments.length - 1] = lastPathRe;
         u = u.replace(pathSegments: pathSegments);
       } else {
-        namedConstructorInRouter = "";
+        namedConstructorInUri = "";
       }
     } else {
-      //如果是如 router://test.named 也可以尝试进行解析  但如 router://xxxx.test.named 为了安全起见 不解析 最好遵照uri的标准用法
+      //如果是如 factory://test.named 也可以尝试进行解析  但如 factory://xxxx.test.named 为了安全起见 不解析 最好遵照uri的标准用法
       if (u.hasAuthority &&
           u.authority.indexOf(":") == -1 &&
           u.authority.indexOf(".") == u.authority.lastIndexOf(".")) {
         String authority = u.authority;
         int ni = authority.lastIndexOf(".");
-        namedConstructorInRouter = ni > -1 ? authority.substring(ni + 1) : "";
+        namedConstructorInUri = ni > -1 ? authority.substring(ni + 1) : "";
         String newAuthority = ni > -1 ? authority.substring(0, ni) : authority;
         u = u.replace(host: newAuthority);
       }
     }
-    return namedConstructorInRouter;
+    return namedConstructorInUri;
   }
   
-  dynamic _createBeanInstanceByCustomCreator(String uri, String namedConstructorInRouter,
+  dynamic _createBeanInstanceByCustomCreator(String uri, String namedConstructorInUri,
       Map<String, dynamic> mapParam, dynamic objParam) {
      {{{createBeanInstanceByCustomCreator}}}
   }
   
-  dynamic _createBeanInstanceBySysCreator(String uri, String namedConstructorInRouter,
+  dynamic _createBeanInstanceBySysCreator(String uri, String namedConstructorInUri,
       Map<String, dynamic> mapParam, dynamic objParam) {
      {{{createBeanInstanceBySysCreator}}}
   }

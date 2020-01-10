@@ -27,8 +27,12 @@ class Bean {
   final String tag;
   final int ext;
   final KeyGen keyGen;
+
   ///必须是继承目标或实现目标的类
   final List<Type> needAssignableFrom;
+
+  final List<String> tagList;
+  final List<int> extList;
 
   const Bean({
     this.uri = "",
@@ -36,6 +40,8 @@ class Bean {
     this.ext = -1,
     this.keyGen = const KeyGenByUri(),
     this.needAssignableFrom = const [],
+    this.tagList = const [],
+    this.extList = const [],
   });
 }
 
@@ -145,6 +151,6 @@ class BoxThree<A, B, C> {
 
 ///自定义Bean的生成器 不在提供Bean的配置信息 自己完全自定义 一个uri对应一个生成策略
 abstract class BeanCustomCreatorBase<Bean> {
-  Bean create(String namedConstructorInRouter, Map<String, dynamic> mapParams,
+  Bean create(String namedConstructorInUri, Map<String, dynamic> mapParams,
       dynamic objParam);
 }

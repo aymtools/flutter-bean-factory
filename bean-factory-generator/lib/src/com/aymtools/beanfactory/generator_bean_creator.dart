@@ -52,7 +52,7 @@ class GBeanInstanceGenerator {
     routeMap.forEach((GBeanCreator generator) {
       stringBuffer.writeln('case "${generator.uri}" :');
       stringBuffer.writeln(
-          ' return ${generator.typeAsStr}.${generator.typeName}().create(namedConstructorInRouter,mapParam,objParam);');
+          ' return ${generator.typeAsStr}.${generator.typeName}().create(namedConstructorInUri,mapParam,objParam);');
     });
     stringBuffer.writeln("default: return null;}");
     return stringBuffer.toString();

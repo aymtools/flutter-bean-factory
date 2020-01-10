@@ -34,8 +34,8 @@ class ScanLibFactoryGenerator extends GeneratorForAnnotation<Factory> {
   }
 
   Future<String> _parseImportLibFactory(
-      List<DartObject> otherRouter, BuildStep buildStep) async {
-    otherRouter.forEach((obj) async {
+      List<DartObject> otherLibBeanFactory, BuildStep buildStep) async {
+    otherLibBeanFactory.forEach((obj) async {
       String libPackageName =
           obj.toTypeValue().element.librarySource.uri.pathSegments[0];
 
@@ -52,11 +52,11 @@ class ScanLibFactoryGenerator extends GeneratorForAnnotation<Factory> {
   }
 
   _parseImportLibBeans(List<LibraryElement> les, BuildStep buildStep) async {
-    les.map((l) => LibraryReader(l)).forEach((l) async {
+    await les.map((l) => LibraryReader(l)).forEach((l) async {
       if (_isFindBean) {
-        await _beanGenerator.generate(l, buildStep);
+        _beanGenerator.generate(l, buildStep);
       } else {
-        await _beanCreatorGenerator.generate(l, buildStep);
+        _beanCreatorGenerator.generate(l, buildStep);
       }
     });
   }

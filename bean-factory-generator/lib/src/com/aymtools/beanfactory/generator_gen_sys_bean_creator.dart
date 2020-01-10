@@ -51,7 +51,7 @@ class GenSysBeanCreatorGenerator extends GeneratorForAnnotation<Factory> {
 class ${gBean.clsType}SysCreator extends BeanCustomCreatorBase<${gBean.clsType_}> {
   @override
   ${gBean.clsType_} create(
-      String namedConstructorInRouter, Map<String, dynamic> mapParam, objParam) {
+      String namedConstructorInUri, Map<String, dynamic> mapParam, objParam) {
       ${gBean.clsType_} beanInstance;
       ${BeanFactoryGenerator.beanCreatorBySysGenerator.generateBeanSwitchConstructorInstance(gBean)}
       return beanInstance;
