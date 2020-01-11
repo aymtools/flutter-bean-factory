@@ -10,9 +10,13 @@ import 'entities.dart';
 import 'generator_factory.dart';
 
 class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
-  TypeChecker beanConstructorAnnotation =
+  TypeChecker _beanConstructorAnnotation =
       TypeChecker.fromRuntime(BeanConstructor);
-  TypeChecker beanParamAnnotation = TypeChecker.fromRuntime(BeanCreateParam);
+  TypeChecker _beanParamAnnotation = TypeChecker.fromRuntime(BeanParam);
+
+  TypeChecker _beanMethodAnnotation = TypeChecker.fromRuntime(BeanMethod);
+
+  TypeChecker _beanFieldAnnotation = TypeChecker.fromRuntime(BeanField);
 
   @override
   generateForAnnotatedElement(
@@ -38,46 +42,61 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       return gBeanMap;
 
     String clazz = element.displayName;
-    String uri = annotation.peek('uri').stringValue;
+    String key = annotation.peek('key').stringValue;
 
     String tag = annotation.peek('tag').stringValue;
     int ext = annotation.peek('ext').intValue;
-    List<String> tagList = annotation.peek('tagList').listValue.isEmpty
-        ? []
-        : annotation.peek('tagList').listValue.map((v) => v.toStringValue());
-    List<int> extList = annotation.peek('extList').listValue.isEmpty
-        ? []
-        : annotation.peek('extList').listValue.map((v) => v.toIntValue());
-//    List<String> tagList = [];
-//    List<int> extList = [];
 
     String genName = annotation.peek('keyGen').objectValue.type.name;
     KeyGen keyGen = BeanFactoryGenerator.keyGens[genName];
     if (keyGen == null) {
       keyGen = KeyGenByClassName();
     }
-    String uriKey = keyGen.gen(uri, tag, ext, clazz, sourceUri);
+    String uriKey = keyGen.gen(key, tag, ext, clazz, sourceUri);
     if ("" == uriKey)
-      uriKey = KeyGenByClassName().gen(uri, tag, ext, clazz, sourceUri);
+      uriKey = KeyGenByClassName().gen(key, tag, ext, clazz, sourceUri);
 
     if (gBeanMap.containsKey(uriKey)) {
       return gBeanMap;
     }
+    ClassElement e = (element as ClassElement);
     GBean rp = GBean(
-        uriKey,
-        clazz,
-        sourceUri,
-        BeanFactoryGenerator.parseAddImportList(
-                sourceUri, BeanFactoryGenerator.imports)
-            .value,
-        tag,
-        ext,
-        tagList,
-        extList,
-        (element as ClassElement),
-        annotation);
-
-    _parseGBeanParams(rp, (element as ClassElement));
+      uriKey,
+      e,
+      annotation,
+      clazz,
+      sourceUri,
+      BeanFactoryGenerator.parseAddImportList(
+              sourceUri, BeanFactoryGenerator.imports)
+          .value,
+      annotation.peek('scanConstructors').boolValue
+          ? _parseGBeanConstructors(e, <GBeanConstructor>[])
+              .map((e) => Pair(e.namedConstructorInUri, e))
+              .toList()
+          : [
+              Pair(
+                  '',
+                  e.constructors
+                      .where((e) => '' == e.name)
+                      .map(
+                        (e) => GBeanConstructor(
+                            '',
+                            e,
+                            ConstantReader(_beanConstructorAnnotation
+                                .firstAnnotationOf(e)),
+                            []),
+                      )
+                      .firstWhere((e) => '' == e.key))
+            ],
+      annotation.peek('scanFields').boolValue ||
+              annotation.peek('scanSuperFields').boolValue
+          ? _parseGBeanFields(e, annotation.peek('scanSuperFields').boolValue)
+          : [],
+      annotation.peek('scanMethods').boolValue ||
+              annotation.peek('scanSuperMethods').boolValue
+          ? _parseGBeanMethods(e, annotation.peek('scanSuperMethods').boolValue)
+          : [],
+    );
 
     if (rp.constructors.length == 0) {
       //只有命名构造函数 切没有加上BeanConstructor的注释 表示无法生成此Bean的构造函数
@@ -88,58 +107,103 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
     return gBeanMap;
   }
 
-  void _parseGBeanParams(GBean gBean, ClassElement element) {
-//    if (element.constructors.length == 1 &&
-//        element.constructors[0].parameters.length == 0) return;
-
+  List<GBeanConstructor> _parseGBeanConstructors(
+      ClassElement element, List<GBeanConstructor> constructors) {
     element.constructors
         .where((ele) => !ele.name.startsWith("_"))
         .forEach((ele) {
       ConstantReader beanConstructor =
-          ConstantReader(beanConstructorAnnotation.firstAnnotationOf(ele));
+          ConstantReader(_beanConstructorAnnotation.firstAnnotationOf(ele));
 
       if (!beanConstructor.isNull || "" == ele.name) {
-        String keyConstructorName = beanConstructor.isNull
+        String keyConstructorName = beanConstructor.isNull ||
+                beanConstructor.peek("key").isNull ||
+                beanConstructor.peek("key").stringValue.isEmpty
             ? ele.name
-            : ('' == beanConstructor.peek("namedConstructor").stringValue
-                ? ele.name
-                : beanConstructor.peek("namedConstructor").stringValue);
+            : beanConstructor.peek("key").stringValue;
 
-        String constructorName = ele.name;
+        GBeanConstructor gbc = GBeanConstructor(
+          keyConstructorName,
+          ele,
+          beanConstructor,
+          _parseGBeanFunctionParams(ele.parameters),
+        );
 
-        GBeanConstructor gbc =
-            GBeanConstructor(keyConstructorName, constructorName);
-
-        ele.parameters.forEach((e) {
-          ConstantReader beanParam =
-              ConstantReader(beanParamAnnotation.firstAnnotationOf(e));
-          String key =
-              beanParam.isNull || '' == beanParam.peek("keyInMap").stringValue
-                  ? ""
-                  : beanParam.peek("keyInMap").stringValue;
-
-          Pair<String, String> importPair =
-              BeanFactoryGenerator.parseAAddImportList(
-                  e.type, BeanFactoryGenerator.imports);
-
-          gbc.params.add(new Pair(
-              key,
-              new GBeanCreateParam(key, e.name, e.isNamed, importPair.key,
-                  importPair.value, e.type.name, e.type, e.runtimeType)));
-        });
-
-        if ("" == constructorName && "" != keyConstructorName) {
-//          GBeanConstructor gbcDEF =
-//              ;
-//          gbcDEF.params = gbc.params;
-          gBean.constructors.add(new Pair(
-              constructorName,
-              GBeanConstructor(constructorName, constructorName)
-                ..params = gbc.params));
+        if ("" != gbc.namedConstructorInUri && "" == gbc.namedConstructor) {
+          constructors.add(
+              GBeanConstructor('', gbc.element, gbc.annotation, gbc.params));
         }
-        gBean.constructors.add(new Pair(keyConstructorName, gbc));
+        constructors.add(gbc);
       }
     });
+
+    return constructors;
+  }
+
+  List<Pair<String, GBeanMethod>> _parseGBeanMethods(
+      ClassElement element, bool isScanSuper) {
+    List<Pair<String, GBeanMethod>> result = element.methods
+        .where((e) => !e.name.startsWith('_'))
+        .map((e) =>
+            Pair(e, ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e))))
+        .where((e) => e.value != null && !e.value.isNull)
+        .map((e) => GBeanMethod(
+            e.key, e.value, _parseGBeanFunctionParams(e.key.parameters)))
+        .map((e) => Pair(e.key, e))
+        .toList(growable: true);
+    if (isScanSuper) {
+      result.addAll(_parseGBeanMethods(element.supertype.element, isScanSuper));
+    }
+    return result;
+  }
+
+  List<Pair<String, GBeanField>> _parseGBeanFields(
+      ClassElement element, bool isScanSuper) {
+    List<Pair<String, GBeanField>> result = element.fields
+        .where((e) => !e.name.startsWith('_'))
+        .map((e) => BoxThree(
+            e,
+            ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e)),
+            BeanFactoryGenerator.parseAAddImportList(
+                e.type, BeanFactoryGenerator.imports)))
+        .where((e) => e.b != null && !e.b.isNull)
+        .map((e) => GBeanField(
+              e.a,
+              e.b,
+              e.c.key,
+              e.c.value,
+              e.a.type.name,
+              e.a.type,
+              e.a.runtimeType,
+            ))
+        .map((e) => Pair(e.key, e))
+        .toList(growable: true);
+    if (isScanSuper) {
+      result.addAll(_parseGBeanFields(element.supertype.element, isScanSuper));
+    }
+    return result;
+  }
+
+  List<Pair<String, GBeanParam>> _parseGBeanFunctionParams(
+      List<ParameterElement> parameters) {
+    return parameters
+        .map((e) => BoxThree(
+            e,
+            ConstantReader(_beanParamAnnotation.firstAnnotationOf(e)),
+            BeanFactoryGenerator.parseAAddImportList(
+                e.type, BeanFactoryGenerator.imports)))
+        .map((e) => GBeanParam(
+              e.a,
+              e.b,
+              e.a.isNamed,
+              e.c.key,
+              e.c.value,
+              e.a.type.name,
+              e.a.type,
+              e.a.runtimeType,
+            ))
+        .map((e) => Pair(e.key, e))
+        .toList();
   }
 }
 
@@ -151,7 +215,7 @@ class GBeanCreatorBySysGenerator {
       GBeanConstructor constructor = pair.value;
 
       String newBeanCMD =
-          "${gBean.typeAsStr}.${gBean.typeName}${'' == constructor.namedConstructorInEntity ? '' : '.${constructor.namedConstructorInEntity}'}";
+          "${gBean.typeAsStr}.${gBean.typeName}${'' == constructor.namedConstructor ? '' : '.${constructor.namedConstructor}'}";
       stringBuffer.writeln("    case '${constructor.namedConstructorInUri}' :");
       stringBuffer.writeln("");
       List<String> gpsccnp =
@@ -193,7 +257,7 @@ class GBeanCreatorBySysGenerator {
 
     //仅使用传入参数的构造函数 非Map
     if (constructor.canCreateForOneParam) {
-      GBeanCreateParam param;
+      GBeanParam param;
       if (constructor.params.length == 1) {
         param = constructor.params[0].value;
       } else {
@@ -236,7 +300,7 @@ class GBeanCreatorBySysGenerator {
 
     //仅使用传入参数的构造函数 专注Map
     if (constructor.canCreateForOneParam) {
-      GBeanCreateParam param;
+      GBeanParam param;
       if (constructor.params.length == 1) {
         param = constructor.params[0].value;
       } else {
@@ -244,7 +308,7 @@ class GBeanCreatorBySysGenerator {
             constructor.params.firstWhere((pair) => !pair.value.isNamed).value;
       }
       //判断时map 并且没有指定 在map中的key
-      if (param.isTypeDartCoreMap && "" == param.keyInMap) {
+      if (param.isTypeDartCoreMap && "" == param.key) {
         ///uri中无参数 只有传入的Map参数
         StringBuffer codeBuffer = StringBuffer();
         codeBuffer.write(
@@ -259,8 +323,8 @@ class GBeanCreatorBySysGenerator {
     //混杂模式 既有传入参数 也有uri中的参数 但构造函数有且只用map 并且未指定map中key
     if (constructor.params.length == 1 &&
         constructor.params[0].value.isTypeDartCoreMap &&
-        "" == constructor.params[0].value.keyInMap) {
-      GBeanCreateParam param = constructor.params[0].value;
+        "" == constructor.params[0].value.key) {
+      GBeanParam param = constructor.params[0].value;
       StringBuffer codeBuffer = StringBuffer();
       /////有且只有路径参数
       codeBuffer.clear();
@@ -293,13 +357,13 @@ class GBeanCreatorBySysGenerator {
 
     //既要传入的参数 也要 uri的参数   有可能要废掉 因为会与map中取值冲突
     if (constructor.params.length == 2 &&
-        "" == constructor.params[0].value.keyInMap &&
+        "" == constructor.params[0].value.key &&
         !constructor.params[0].value.isNamed &&
-        "" == constructor.params[1].value.keyInMap &&
+        "" == constructor.params[1].value.key &&
         !constructor.params[1].value.isNamed &&
         constructor.params[1].value.isTypeDartCoreMap) {
-      GBeanCreateParam param1 = constructor.params[0].value;
-      GBeanCreateParam param2 = constructor.params[1].value;
+      GBeanParam param1 = constructor.params[0].value;
+      GBeanParam param2 = constructor.params[1].value;
 
       StringBuffer codeBuffer = StringBuffer();
       if (param1.isTypeDartCoreMap) {
@@ -379,7 +443,7 @@ class GBeanCreatorBySysGenerator {
     if (constructor.params.length == 0 ||
         (constructor.params.length > 0 &&
             !(constructor.params[0].value.isTypeDartCoreMap &&
-                "" == constructor.params[0].value.keyInMap))) {
+                "" == constructor.params[0].value.key))) {
       result.add(
           "if(mapParam!=null) {${_generateBeanSwitchConstructorParamsForMapInstance(constructor, newBeanCMD)}\n}");
     }
@@ -388,11 +452,10 @@ class GBeanCreatorBySysGenerator {
 
   String _generateBeanSwitchConstructorParamsForMapInstance(
       GBeanConstructor constructor, String newBeanCMD) {
-    List<GBeanCreateParam> params =
+    List<GBeanParam> params =
         constructor.params.map((pair) => pair.value).toList();
 
-    List<GBeanCreateParam> paramsNamed =
-        params.where((p) => p.isNamed).toList();
+    List<GBeanParam> paramsNamed = params.where((p) => p.isNamed).toList();
 
     List<_IFGenerator> paramsNeed = params
         .where((p) => !p.isNamed)
@@ -462,13 +525,13 @@ class GBeanCreatorBySysGenerator {
     return r;
   }
 
-  List<GBeanCreateParam> _cloneListParams(List<GBeanCreateParam> source) {
+  List<GBeanParam> _cloneListParams(List<GBeanParam> source) {
 //    return cloneList(source, (e) => e.clone());
     return cloneList(source, (e) => e);
   }
 
 //相比穷举的快速生成方案 参考自来源https://zhenbianshu.github.io/2019/01/charming_alg_permutation_and_combination.html
-  List<List<_IFGenerator>> _combination(List<GBeanCreateParam> source) {
+  List<List<_IFGenerator>> _combination(List<GBeanParam> source) {
     List<List<_IFGenerator>> result = [<_IFGenerator>[]];
 
     //将所有的参数全必选的选项加入到返回结果中
@@ -498,7 +561,7 @@ class GBeanCreatorBySysGenerator {
   }
 
   String _generateBeanConstructorOneParams(
-      GBeanCreateParam param, String newBeanCMD, String value) {
+      GBeanParam param, String newBeanCMD, String value) {
 //    if (param.isNamed) {
 //      return ("beanInstance=$newBeanCMD(${param.keyInFun}:$value);");
 //    } else {
@@ -508,7 +571,7 @@ class GBeanCreatorBySysGenerator {
   }
 
   String _generateBeanConstructorParams(
-      String newBeanCMD, List<GBeanCreateParam> params, List<String> values) {
+      String newBeanCMD, List<GBeanParam> params, List<String> values) {
     if (params.length != values.length)
       throw Exception(
           "_generateBeanConstructorParams params.length!=values.length");
@@ -516,10 +579,10 @@ class GBeanCreatorBySysGenerator {
     StringBuffer codeBuffer = StringBuffer();
     codeBuffer.write("beanInstance=$newBeanCMD(");
     for (var i = 0; i < params.length; i++) {
-      GBeanCreateParam param = params[i];
+      GBeanParam param = params[i];
       String value = values[i];
       if (param.isNamed) {
-        codeBuffer.write("${param.keyInFun}:$value");
+        codeBuffer.write("${param.paramName}:$value");
       } else {
         codeBuffer.write("$value");
       }
@@ -532,7 +595,7 @@ class GBeanCreatorBySysGenerator {
     return codeBuffer.toString();
   }
 
-  dynamic _generateBeanParamDefValueByDartCoreTypeBase(GBeanCreateParam param) {
+  dynamic _generateBeanParamDefValueByDartCoreTypeBase(GBeanParam param) {
     switch (param.paramType) {
       case "int":
         return 0;
@@ -555,31 +618,31 @@ class GBeanCreatorBySysGenerator {
 }
 
 class _IFGenerator {
-  GBeanCreateParam param;
+  GBeanParam param;
   bool isSelect = false;
   List<String> otherContent = [];
 
   _IFGenerator(this.param, {this.isSelect = false});
 
   String get whereStr {
-    if (!isSelect) return "!mapParam.containsKey('${param.key}')";
+    if (!isSelect) return "!mapParam.containsKey('${param.keyInMaps}')";
     String w = "";
     if ("String" == param.paramType) {
-      w = "(mapParam.containsKey('${param.key}') && "
-          "(mapParam['${param.key}'] is ${param.paramType} "
-          "|| mapParam['${param.key}'] is num || mapParam['${param.key}'] is bool))";
+      w = "(mapParam.containsKey('${param.keyInMaps}') && "
+          "(mapParam['${param.keyInMaps}'] is ${param.paramType} "
+          "|| mapParam['${param.keyInMaps}'] is num || mapParam['${param.keyInMaps}'] is bool))";
     } else if ("int" == param.paramType) {
-      w = "(mapParam.containsKey('${param.key}') && "
-          "(mapParam['${param.key}'] is ${param.paramType} || mapParam['${param.key}'] is String))";
+      w = "(mapParam.containsKey('${param.keyInMaps}') && "
+          "(mapParam['${param.keyInMaps}'] is ${param.paramType} || mapParam['${param.keyInMaps}'] is String))";
     } else if ("double" == param.paramType) {
-      w = "(mapParam.containsKey('${param.key}') && "
-          "(mapParam['${param.key}'] is ${param.paramType} || mapParam['${param.key}'] is String))";
+      w = "(mapParam.containsKey('${param.keyInMaps}') && "
+          "(mapParam['${param.keyInMaps}'] is ${param.paramType} || mapParam['${param.keyInMaps}'] is String))";
     } else if ("bool" == param.paramType) {
-      w = "(mapParam.containsKey('${param.key}') && "
-          "(mapParam['${param.key}'] is ${param.paramType} || mapParam['${param.key}'] is String))";
+      w = "(mapParam.containsKey('${param.keyInMaps}') && "
+          "(mapParam['${param.keyInMaps}'] is ${param.paramType} || mapParam['${param.keyInMaps}'] is String))";
     } else {
-      w = "(mapParam.containsKey('${param.key}') && "
-          "(mapParam['${param.key}'] is ${param.paramType}))";
+      w = "(mapParam.containsKey('${param.keyInMaps}') && "
+          "(mapParam['${param.keyInMaps}'] is ${param.paramType}))";
     }
     return w;
   }
@@ -588,18 +651,18 @@ class _IFGenerator {
     if (!isSelect) return "";
     String c = "";
     if ("String" == param.paramType) {
-      c = "mapParam['${param.key}'] is ${param.paramType} ? mapParam['${param.key}'] as ${param.paramType} : mapParam['${param.key}'].toString()";
+      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : mapParam['${param.keyInMaps}'].toString()";
     } else if ("int" == param.paramType) {
-      c = "mapParam['${param.key}'] is ${param.paramType} ? mapParam['${param.key}'] as ${param.paramType} : "
-          "(int.parse( mapParam['${param.key}']) )";
+      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : "
+          "(int.parse( mapParam['${param.keyInMaps}']) )";
     } else if ("double" == param.paramType) {
-      c = "mapParam['${param.key}'] is ${param.paramType} ? mapParam['${param.key}'] as ${param.paramType} : "
-          "(double.parse( mapParam['${param.key}']) )";
+      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : "
+          "(double.parse( mapParam['${param.keyInMaps}']) )";
     } else if ("bool" == param.paramType) {
-      c = "mapParam['${param.key}'] is ${param.paramType} ? mapParam['${param.key}'] as ${param.paramType} : "
-          "('true'==mapParam['${param.key}'] ? true : false )";
+      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : "
+          "('true'==mapParam['${param.keyInMaps}'] ? true : false )";
     } else {
-      c = "mapParam['${param.key}'] as ${param.paramType}";
+      c = "mapParam['${param.keyInMaps}'] as ${param.paramType}";
     }
     return c;
   }

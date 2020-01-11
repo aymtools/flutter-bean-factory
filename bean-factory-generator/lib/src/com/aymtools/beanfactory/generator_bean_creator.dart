@@ -28,17 +28,17 @@ class ScanBeanCreatorGenerator extends GeneratorForAnnotation<BeanCreator> {
       return routePageGeneratorMap;
 
     String clazz = element.displayName;
-    String uri = annotation.peek('uri').stringValue;
+    String key = annotation.peek('key').stringValue;
 
-    String uriKey = "'" + uri + "'";
+    String uriKey = "'" + key + "'";
     Pair<String, String> imp = BeanFactoryGenerator.parseAddImportList(
         element.librarySource.uri.toString(), BeanFactoryGenerator.imports);
     GBeanCreator pageGenerator = new GBeanCreator(
-        uri, clazz, imp.key, imp.value, (element as ClassElement), annotation);
+        key, (element as ClassElement), annotation, clazz, imp.key, imp.value);
 
-    if (!uri.endsWith(".sys.creator.bf.aymtools.dart")) {
+    if (!key.endsWith(".sys.creator.bf.aymtools.dart")) {
       if (!routePageGeneratorMap.containsKey(uriKey)) {
-        routePageGeneratorMap[uri] = pageGenerator;
+        routePageGeneratorMap[key] = pageGenerator;
       }
     }
     return routePageGeneratorMap;

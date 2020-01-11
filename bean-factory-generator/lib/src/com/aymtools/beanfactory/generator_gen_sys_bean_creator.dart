@@ -26,18 +26,19 @@ class GenSysBeanCreatorGenerator extends GeneratorForAnnotation<Factory> {
             : "import '${item.key}' as ${item.value} ;")
         .fold("", (i, n) => i + n);
 
-    BeanFactoryGenerator.beanSysCreatorMap.addAll(BeanFactoryGenerator.beanMap
-        .map((k, v) => MapEntry(
+    BeanFactoryGenerator.beanSysCreatorMap
+        .addAll(BeanFactoryGenerator.beanMap.map((k, v) => MapEntry(
             k,
             GBeanCreator(
-                v.uri,
-                "${v.clsType}SysCreator",
-                writeUri,
-                BeanFactoryGenerator.parseAddImportList(
-                        writeUri, BeanFactoryGenerator.imports)
-                    .value,
-                null,
-                null)))); //'BeanCreator'
+              v.uri,
+              null,
+              null,
+              "${v.clsType}SysCreator",
+              writeUri,
+              BeanFactoryGenerator.parseAddImportList(
+                      writeUri, BeanFactoryGenerator.imports)
+                  .value,
+            )))); //'BeanCreator'
     result = BeanFactoryGenerator.beanMap.values
         .map((b) => _genSysClassGenerator(b))
         .fold(result, (i, n) => i + n);
