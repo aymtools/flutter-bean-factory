@@ -84,7 +84,7 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
                             e,
                             ConstantReader(_beanConstructorAnnotation
                                 .firstAnnotationOf(e)),
-                            []),
+                            _parseGBeanFunctionParams(e.parameters)),
                       )
                       .firstWhere((e) => '' == e.key))
             ],
