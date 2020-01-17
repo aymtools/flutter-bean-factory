@@ -147,15 +147,15 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
     List<GBeanConstructor> constructors = [];
     element.constructors
         .where((ele) => !ele.name.startsWith("_"))
-//        .where((ele) =>
-//            scanUsedWhiteList ||
-//            "" == ele.name ||
-//            _beanConstructorNotAnnotation.firstAnnotationOf(ele) == null)
+        .where((ele) =>
+            scanUsedWhiteList ||
+            "" == ele.name ||
+            _beanConstructorNotAnnotation.firstAnnotationOf(ele) == null)
         .forEach((ele) {
       ConstantReader beanConstructor =
           ConstantReader(_beanConstructorAnnotation.firstAnnotationOf(ele));
 
-      if (!beanConstructor.isNull || "" == ele.name) {
+      if (!beanConstructor.isNull || "" == ele.name || !scanUsedWhiteList) {
         String keyConstructorName = beanConstructor.isNull ||
                 beanConstructor.peek("key").isNull ||
                 beanConstructor.peek("key").stringValue.isEmpty
@@ -184,12 +184,12 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       ClassElement element, bool isScanSuper, bool scanUsedWhiteList) {
     List<Pair<String, GBeanMethod>> result = element.methods
         .where((e) => !e.name.startsWith('_'))
-//        .where((ele) =>
-//            scanUsedWhiteList ||
-//            _beanMethodNotAnnotation.firstAnnotationOf(ele) == null)
+        .where((ele) =>
+            scanUsedWhiteList ||
+            _beanMethodNotAnnotation.firstAnnotationOf(ele) == null)
         .map((e) =>
             Pair(e, ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e))))
-        .where((e) => e.value != null && !e.value.isNull)
+        .where((e) => e.value != null && !e.value.isNull || !scanUsedWhiteList)
         .map((e) => GBeanMethod(
             e.key, e.value, _parseGBeanFunctionParams(e.key.parameters)))
         .map((e) => Pair(e.key, e))
@@ -205,16 +205,16 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       ClassElement element, bool isScanSuper, bool scanUsedWhiteList) {
     List<Pair<String, GBeanField>> result = element.fields
         .where((e) => !e.name.startsWith('_'))
-//        .where((ele) =>
-//            scanUsedWhiteList ||
-//            "" == ele.name ||
-//            _beanFieldNotAnnotation.firstAnnotationOf(ele) == null)
+        .where((ele) =>
+            scanUsedWhiteList ||
+            "" == ele.name ||
+            _beanFieldNotAnnotation.firstAnnotationOf(ele) == null)
         .map((e) => BoxThree(
             e,
             ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e)),
             BeanFactoryGenerator.parseAAddImportList(
                 e.type, BeanFactoryGenerator.imports)))
-        .where((e) =>(e.b != null && !e.b.isNull) )
+        .where((e) => (e.b != null && !e.b.isNull) || !scanUsedWhiteList)
         .map((e) => GBeanField(
               e.a,
               e.b,

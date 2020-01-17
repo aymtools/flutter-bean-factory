@@ -130,7 +130,9 @@ class BeanConstructor extends _BeanBase {
 }
 
 ///黑名单模式模式时有效 不扫描的构造函数
-class BeanConstructorNot {}
+class BeanConstructorNot {
+  const BeanConstructorNot();
+}
 
 /// Bean构造函数或factory或方法体参数指定在map参数中的名字
 class BeanParam extends _BeanBase {
@@ -184,7 +186,9 @@ class BeanMethod extends _BeanBase {
 }
 
 ///黑名单模式模式时有效 不扫描的方法
-class BeanMethodNot {}
+class BeanMethodNot {
+  const BeanMethodNot();
+}
 
 ///
 class BeanMethodParam extends BeanParam {
@@ -215,7 +219,9 @@ class BeanField extends _BeanBase {
 }
 
 ///黑名单模式模式时有效 不扫描的属性
-class BeanFieldNot {}
+class BeanFieldNot {
+  const BeanFieldNot();
+}
 
 /// 自定义Bean生成器 定义的类必须继承 BeanCustomCreatorBase
 class BeanCreator {
