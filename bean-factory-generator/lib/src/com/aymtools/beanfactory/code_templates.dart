@@ -21,7 +21,9 @@ class BeanFactory {
     }
     return _instance;
   }
-
+  static T createBeanAndAs<T>(String uri, {dynamic params}) {
+    return instance.getBean(uri, params: params) as T;
+  }
   static dynamic createBean(String uri, {dynamic params}) {
     return instance.getBean(uri, params: params);
   }
