@@ -12,11 +12,15 @@ import 'generator_factory.dart';
 class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
   TypeChecker _beanConstructorAnnotation =
       TypeChecker.fromRuntime(BeanConstructor);
+  TypeChecker _beanConstructorNotAnnotation =
+      TypeChecker.fromRuntime(BeanConstructorNot);
   TypeChecker _beanParamAnnotation = TypeChecker.fromRuntime(BeanParam);
 
   TypeChecker _beanMethodAnnotation = TypeChecker.fromRuntime(BeanMethod);
+  TypeChecker _beanMethodNotAnnotation = TypeChecker.fromRuntime(BeanMethodNot);
 
   TypeChecker _beanFieldAnnotation = TypeChecker.fromRuntime(BeanField);
+  TypeChecker _beanFieldNotAnnotation = TypeChecker.fromRuntime(BeanFieldNot);
 
   @override
   generateForAnnotatedElement(
@@ -42,13 +46,21 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       return gBeanMap;
 
     String clazz = element.displayName;
-    String key = annotation.peek('key').stringValue;
+    String key =
+        annotation.peek('key').isNull ? '' : annotation.peek('key').stringValue;
 
-    String tag = annotation.peek('tag').stringValue;
-    int ext = annotation.peek('ext').intValue;
+    String tag =
+        annotation.peek('tag').isNull ? '' : annotation.peek('tag').stringValue;
+    int ext =
+        annotation.peek('ext').isNull ? -1 : annotation.peek('ext').intValue;
 
-    String genName = annotation.peek('keyGen').objectValue.type.name;
-    KeyGen keyGen = BeanFactoryGenerator.keyGens[genName];
+    KeyGen keyGen = KeyGenByClassName();
+    if (!(annotation.peek('keyGen').isNull ||
+        annotation.peek('keyGen').objectValue.isNull ||
+        '' == annotation.peek('keyGen').objectValue.type.name)) {
+      keyGen = BeanFactoryGenerator
+          .keyGens[annotation.peek('keyGen').objectValue.type.name];
+    }
     if (keyGen == null) {
       keyGen = KeyGenByClassName();
     }
@@ -60,6 +72,31 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       return gBeanMap;
     }
     ClassElement e = (element as ClassElement);
+
+    bool scanConstructors = !annotation.peek('scanConstructors').isNull &&
+        annotation.peek('scanConstructors').boolValue;
+
+    bool scanConstructorsUsedBlackList =
+        annotation.peek('scanConstructorsUsedBlackList').isNull
+            ? true
+            : annotation.peek('scanConstructorsUsedBlackList').boolValue;
+
+    bool scanFields = !annotation.peek('scanFields').isNull &&
+        annotation.peek('scanFields').boolValue;
+    bool scanFieldsUsedBlackList =
+        !annotation.peek('scanFieldsUsedBlackList').isNull &&
+            annotation.peek('scanFieldsUsedBlackList').boolValue;
+    bool scanSuperFields = !annotation.peek('scanSuperFields').isNull &&
+        annotation.peek('scanSuperFields').boolValue;
+
+    bool scanMethods = !annotation.peek('scanMethods').isNull &&
+        annotation.peek('scanMethods').boolValue;
+    bool scanMethodsUsedBlackList =
+        !annotation.peek('scanMethodsUsedBlackList').isNull &&
+            annotation.peek('scanMethodsUsedBlackList').boolValue;
+    bool scanSuperMethods = !annotation.peek('scanSuperMethods').isNull &&
+        annotation.peek('scanSuperMethods').boolValue;
+
     GBean rp = GBean(
       uriKey,
       e,
@@ -69,8 +106,8 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
       BeanFactoryGenerator.parseAddImportList(
               sourceUri, BeanFactoryGenerator.imports)
           .value,
-      annotation.peek('scanConstructors').boolValue
-          ? _parseGBeanConstructors(e, <GBeanConstructor>[])
+      scanConstructors
+          ? _parseGBeanConstructors(e, !scanConstructorsUsedBlackList)
               .map((e) => Pair(e.namedConstructorInUri, e))
               .toList()
           : [
@@ -88,13 +125,11 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
                       )
                       .firstWhere((e) => '' == e.key))
             ],
-      annotation.peek('scanFields').boolValue ||
-              annotation.peek('scanSuperFields').boolValue
-          ? _parseGBeanFields(e, annotation.peek('scanSuperFields').boolValue)
+      scanFields || scanSuperFields
+          ? _parseGBeanFields(e, scanSuperFields, !scanFieldsUsedBlackList)
           : [],
-      annotation.peek('scanMethods').boolValue ||
-              annotation.peek('scanSuperMethods').boolValue
-          ? _parseGBeanMethods(e, annotation.peek('scanSuperMethods').boolValue)
+      scanMethods || scanSuperMethods
+          ? _parseGBeanMethods(e, scanSuperMethods, !scanMethodsUsedBlackList)
           : [],
     );
 
@@ -108,9 +143,14 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
   }
 
   List<GBeanConstructor> _parseGBeanConstructors(
-      ClassElement element, List<GBeanConstructor> constructors) {
+      ClassElement element, bool scanUsedWhiteList) {
+    List<GBeanConstructor> constructors = [];
     element.constructors
         .where((ele) => !ele.name.startsWith("_"))
+//        .where((ele) =>
+//            scanUsedWhiteList ||
+//            "" == ele.name ||
+//            _beanConstructorNotAnnotation.firstAnnotationOf(ele) == null)
         .forEach((ele) {
       ConstantReader beanConstructor =
           ConstantReader(_beanConstructorAnnotation.firstAnnotationOf(ele));
@@ -141,9 +181,12 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
   }
 
   List<Pair<String, GBeanMethod>> _parseGBeanMethods(
-      ClassElement element, bool isScanSuper) {
+      ClassElement element, bool isScanSuper, bool scanUsedWhiteList) {
     List<Pair<String, GBeanMethod>> result = element.methods
         .where((e) => !e.name.startsWith('_'))
+//        .where((ele) =>
+//            scanUsedWhiteList ||
+//            _beanMethodNotAnnotation.firstAnnotationOf(ele) == null)
         .map((e) =>
             Pair(e, ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e))))
         .where((e) => e.value != null && !e.value.isNull)
@@ -152,21 +195,26 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
         .map((e) => Pair(e.key, e))
         .toList(growable: true);
     if (isScanSuper) {
-      result.addAll(_parseGBeanMethods(element.supertype.element, isScanSuper));
+      result.addAll(_parseGBeanMethods(
+          element.supertype.element, isScanSuper, scanUsedWhiteList));
     }
     return result;
   }
 
   List<Pair<String, GBeanField>> _parseGBeanFields(
-      ClassElement element, bool isScanSuper) {
+      ClassElement element, bool isScanSuper, bool scanUsedWhiteList) {
     List<Pair<String, GBeanField>> result = element.fields
         .where((e) => !e.name.startsWith('_'))
+//        .where((ele) =>
+//            scanUsedWhiteList ||
+//            "" == ele.name ||
+//            _beanFieldNotAnnotation.firstAnnotationOf(ele) == null)
         .map((e) => BoxThree(
             e,
             ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e)),
             BeanFactoryGenerator.parseAAddImportList(
                 e.type, BeanFactoryGenerator.imports)))
-        .where((e) => e.b != null && !e.b.isNull)
+        .where((e) =>(e.b != null && !e.b.isNull) )
         .map((e) => GBeanField(
               e.a,
               e.b,
@@ -179,7 +227,8 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
         .map((e) => Pair(e.key, e))
         .toList(growable: true);
     if (isScanSuper) {
-      result.addAll(_parseGBeanFields(element.supertype.element, isScanSuper));
+      result.addAll(_parseGBeanFields(
+          element.supertype.element, isScanSuper, scanUsedWhiteList));
     }
     return result;
   }

@@ -53,9 +53,12 @@ class Bean extends _BeanBase {
   final List<Type> needAssignableFrom;
 
   final bool scanConstructors;
+  final bool scanConstructorsUsedBlackList;
   final bool scanMethods;
+  final bool scanMethodsUsedBlackList;
   final bool scanSuperMethods;
   final bool scanFields;
+  final bool scanFieldsUsedBlackList;
   final bool scanSuperFields;
 
   const Bean({
@@ -71,9 +74,12 @@ class Bean extends _BeanBase {
     this.keyGen = const KeyGenByUri(),
     this.needAssignableFrom = const [],
     this.scanConstructors = true,
+    this.scanConstructorsUsedBlackList = false,
     this.scanMethods = false,
+    this.scanMethodsUsedBlackList = false,
     this.scanSuperMethods = false,
     this.scanFields = false,
+    this.scanFieldsUsedBlackList = false,
     this.scanSuperFields = false,
   }) : super(
             key: key,
@@ -122,6 +128,9 @@ class BeanConstructor extends _BeanBase {
             tagList: tagList,
             extList: extList);
 }
+
+///黑名单模式模式时有效 不扫描的构造函数
+class BeanConstructorNot {}
 
 /// Bean构造函数或factory或方法体参数指定在map参数中的名字
 class BeanParam extends _BeanBase {
@@ -174,6 +183,10 @@ class BeanMethod extends _BeanBase {
             extList: extList);
 }
 
+///黑名单模式模式时有效 不扫描的方法
+class BeanMethodNot {}
+
+///
 class BeanMethodParam extends BeanParam {
   const BeanMethodParam(String keyInMap) : super(key: keyInMap);
 }
@@ -200,6 +213,9 @@ class BeanField extends _BeanBase {
             tagList: tagList,
             extList: extList);
 }
+
+///黑名单模式模式时有效 不扫描的属性
+class BeanFieldNot {}
 
 /// 自定义Bean生成器 定义的类必须继承 BeanCustomCreatorBase
 class BeanCreator {
@@ -294,3 +310,5 @@ abstract class BeanCustomCreatorBase<Bean> {
   Bean create(String namedConstructorInUri, Map<String, dynamic> mapParams,
       dynamic objParam);
 }
+
+
