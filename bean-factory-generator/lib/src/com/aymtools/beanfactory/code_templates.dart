@@ -21,14 +21,34 @@ class BeanFactory {
     }
     return _instance;
   }
-  static T createBeanAndAs<T>(String uri, {dynamic params}) {
-    return instance.getBean(uri, params: params) as T;
-  }
-  static dynamic createBean(String uri, {dynamic params}) {
-    return instance.getBean(uri, params: params);
+  
+  static Map<String, dynamic> _singleInstanceBean = {};
+
+  static T getBeanAndAs<T>(String uri, {dynamic params}) {
+    return instance.getBeanInstance(uri, params: params) as T;
   }
 
-  dynamic getBean(String uri, {dynamic params}) {
+  static dynamic getBean(String uri, {dynamic params}) {
+    return instance.getBeanInstance(uri, params: params);
+  }
+
+  static T getSingleBeanAndAs<T>(String uri) {
+    return instance.getSingleBeanInstance(uri) as T;
+  }
+
+  static dynamic getSingleBean(String uri) {
+    return instance.getSingleBeanInstance(uri);
+  }
+
+  dynamic getSingleBeanInstance(String uri) {
+    uri = getPageUri(Uri.parse(uri));
+    if (_singleInstanceBean.containsKey(uri)) return _singleInstanceBean[uri];
+    dynamic bean = getBeanInstance(uri);
+    _singleInstanceBean[uri] = bean;
+    return bean;
+  }
+
+  dynamic getBeanInstance(String uri, {dynamic params}) {
     Map<String, dynamic> mapParam = {};
     dynamic objParam;
 
