@@ -185,8 +185,21 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
   }
 
   static GBean getGBeanForDartFile(String librarySourceUri, String className) {
-    return getGBeans((bean) =>
-            bean.sourceUri == librarySourceUri && bean.typeName == className)
-        ?.first;
+//    return getGBeans((bean) =>
+//            bean.sourceUri == librarySourceUri && bean.typeName == className)
+//        ?.first;
+    if (_tempQuickSearch.isEmpty) {
+      beanMap.values.forEach((e) {
+        Map<String, GBean> map = _tempQuickSearch[e.sourceUri];
+        if (map == null) {
+          map = {};
+          _tempQuickSearch[e.sourceUri] = map;
+        }
+        map[e.typeName] = e;
+      });
+    }
+    return _tempQuickSearch[librarySourceUri][className];
   }
+
+  static Map<String, Map<String, GBean>> _tempQuickSearch = {};
 }
