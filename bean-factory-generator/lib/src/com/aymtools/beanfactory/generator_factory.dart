@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:bean_factory/bean_factory.dart';
 import 'package:build/build.dart';
@@ -9,8 +10,11 @@ import 'entities.dart';
 import 'code_templates.dart';
 import 'generator_bean.dart';
 import 'generator_bean_creator.dart';
+import 'package:dart_style/dart_style.dart';
 
 class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
+  static final writeDartFileFormatter = DartFormatter();
+
   static Map<String, GBean> beanMap = {};
   static Map<String, GBean> beanParseErrorMap = {};
   static Map<String, GBeanCreator> beanCreatorMap = {};
@@ -42,7 +46,7 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
     _beanFactorySysDartFileUri = _genBeanFactorySysDartFileUri(element);
 
     String sysAs = getImportInfoDefN(getBeanFactorySysDartLibUri).value;
-    return render(codeTemplate, <String, dynamic>{
+    String bfContent = render(codeTemplate, <String, dynamic>{
       'imports': imports
           .map((item) => {
                 'importsPath': "" == item.value
@@ -87,19 +91,33 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
               'case ${e.clsType_} : ${sysAs}.set${e.clsType}AllFields(bean,values);break;')
           .reduce((v, e) => v + e),
     });
+
+    String filePath = buildStep.inputId.path;
+    filePath = filePath.substring(0, filePath.lastIndexOf("/"));
+    filePath = "$filePath/beanfactory.aymtools.dart";
+    var sysBFFile = File(filePath);
+    if (sysBFFile.existsSync()) {
+      sysBFFile.deleteSync();
+    }
+    sysBFFile.writeAsString(writeDartFileFormatter.format(bfContent));
+    return null;
   }
 
   String _genBeanFactoryDartFileUri(Element element) {
     String wUri = element.librarySource.uri.toString();
-    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
-    wUri += ".bf.aymtools.dart";
+//    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
+//    wUri += ".bf.aymtools.dart";
+    wUri = wUri.substring(0, wUri.lastIndexOf("/") + 1) +
+        'beanfactory.aymtools.dart';
     return wUri;
   }
 
   String _genBeanFactorySysDartFileUri(Element element) {
     String wUri = element.librarySource.uri.toString();
-    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
-    wUri += ".sys.bf.aymtools.dart";
+//    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
+//    wUri += ".sys.bf.aymtools.dart";
+    wUri = wUri.substring(0, wUri.lastIndexOf("/") + 1) +
+        'beanfactory.sys.aymtools.dart';
     return wUri;
   }
 

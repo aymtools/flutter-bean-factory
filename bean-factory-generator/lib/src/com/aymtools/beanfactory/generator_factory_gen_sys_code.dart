@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:bean_factory/bean_factory.dart';
 import 'package:build/src/builder/build_step.dart';
@@ -13,9 +15,22 @@ class GenSysBeanCreatorGenerator extends GeneratorForAnnotation<Factory> {
   Future<String> generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) {
     String wUri = element.librarySource.uri.toString();
-    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
-    wUri += ".sys.bf.aymtools.dart";
-    return _genSysGenerator(wUri);
+//    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
+//    wUri += ".sys.bf.aymtools.dart";
+    String filePath = buildStep.inputId.path;
+    filePath = filePath.substring(0, filePath.lastIndexOf("/"));
+    filePath = "$filePath/beanfactory.sys.aymtools.dart";
+    wUri = wUri.substring(0, wUri.lastIndexOf("/") + 1) +
+        'beanfactory.sys.aymtools.dart';
+    _genSysGenerator(wUri).then((value) {
+      var sysBFFile = File(filePath);
+      if (sysBFFile.existsSync()) {
+        sysBFFile.deleteSync();
+      }
+      sysBFFile.writeAsString(
+          BeanFactoryGenerator.writeDartFileFormatter.format(value));
+    });
+    return null;
   }
 
   Future<String> _genSysGenerator(String writeUri) async {
@@ -77,7 +92,7 @@ class ${gBean.clsType}SysCreator extends BeanCustomCreatorBase<${gBean.clsType_}
   @override
   ${gBean.clsType_} create(
       String namedConstructorInUri, Map<String, dynamic> mapParam, objectParam) {
-       ${BeanFactoryGenerator.beanCreatorBySysGenerator.generateBeanSwitchConstructorInstance(gBean,'namedConstructorInUri','mapParam','objectParam')}
+       ${BeanFactoryGenerator.beanCreatorBySysGenerator.generateBeanSwitchConstructorInstance(gBean, 'namedConstructorInUri', 'mapParam', 'objectParam')}
   }
 }
     """;
@@ -86,7 +101,7 @@ class ${gBean.clsType}SysCreator extends BeanCustomCreatorBase<${gBean.clsType_}
   String _genMethodInvoke(GBean gBean) {
     return """
 dynamic invoke${gBean.clsType}Methods(${gBean.clsType_} bean , String methodName , {Map<String, dynamic> params}){
-   ${BeanFactoryGenerator.beanCreatorBySysGenerator.generateBeanSwitchGBeanMethodInvoker(gBean,'methodName','bean','params')}
+   ${BeanFactoryGenerator.beanCreatorBySysGenerator.generateBeanSwitchGBeanMethodInvoker(gBean, 'methodName', 'bean', 'params')}
     throw NoSuchMethodException(${gBean.clsType_} , methodName);
 }
     """;
