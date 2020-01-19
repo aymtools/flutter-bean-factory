@@ -50,10 +50,10 @@ builders:
     builder_factories: ['genSysCreatorBuilder']
     build_extensions: { '.dart': ['.sys.bf.aymtools.dart'] }
     auto_apply: root_package
-    build_to: source
+    build_to: cache
   bean_factory_builder:
     import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
     builder_factories: ['beanFactoryBuilder']
     build_extensions: { '.dart': ['.bf.aymtools.dart'] }
     auto_apply: root_package
-    build_to: source
+    build_to: cache
