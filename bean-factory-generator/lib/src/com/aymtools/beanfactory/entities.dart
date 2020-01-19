@@ -225,6 +225,12 @@ class GBeanMethod extends _Tag {
       : super(methodElement, annotation);
 
   String get methodName => elementName;
+
+  String get methodNameKey => key.isEmpty ? methodName : key;
+
+  DartType get methodResultType => methodElement.returnType;
+  bool get isResultVoid => methodResultType.isVoid;
+//  bool get resultTypeName => methodResultType.name;
 }
 
 //class GBeanMethodParam extends GBeanParam {
@@ -257,6 +263,8 @@ class GBeanField extends _Tag {
       : super(fieldElement, annotation);
 
   String get fieldName => elementName;
+
+  String get fieldNameKey => key.isEmpty ? fieldName : key;
 }
 
 class GBeanCreator {

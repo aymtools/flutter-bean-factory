@@ -7,7 +7,7 @@ import 'generator_export_lib.dart';
 import 'generator_factory.dart';
 import 'generator_factory_init.dart';
 import 'generator_factory_scan_lib.dart';
-import 'generator_gen_sys_bean_creator.dart';
+import 'generator_factory_gen_sys_code.dart';
 import 'generator_other_class_template.dart';
 
 var _num = 0;
@@ -37,7 +37,7 @@ Builder scanLibBeanBuilder(BuilderOptions options) => _num > 1
 Builder genSysCreatorBuilder(BuilderOptions options) => _num > 1
     ? null
     : LibraryBuilder(GenSysBeanCreatorGenerator(),
-        generatedExtension: ".sys.creator.bf.aymtools.dart");
+        generatedExtension: ".sys.bf.aymtools.dart");
 
 Builder scanCreatorBuilder(BuilderOptions options) => _num > 1
     ? null

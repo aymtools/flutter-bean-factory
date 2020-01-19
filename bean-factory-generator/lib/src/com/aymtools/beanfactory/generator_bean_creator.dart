@@ -36,7 +36,7 @@ class ScanBeanCreatorGenerator extends GeneratorForAnnotation<BeanCreator> {
     GBeanCreator pageGenerator = new GBeanCreator(
         key, (element as ClassElement), annotation, clazz, imp.key, imp.value);
 
-    if (!key.endsWith(".sys.creator.bf.aymtools.dart")) {
+    if (!key.endsWith(".sys.bf.aymtools.dart")) {
       if (!routePageGeneratorMap.containsKey(uriKey)) {
         routePageGeneratorMap[key] = pageGenerator;
       }

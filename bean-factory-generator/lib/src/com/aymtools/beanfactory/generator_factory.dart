@@ -33,9 +33,15 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
     "KeyGenByClassSimpleName": KeyGenByClassSimpleName(),
   };
 
+  static String _beanFactoryDartFileUri = '', _beanFactorySysDartFileUri = '';
+
   @override
   generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) {
+    _beanFactoryDartFileUri = _genBeanFactoryDartFileUri(element);
+    _beanFactorySysDartFileUri = _genBeanFactorySysDartFileUri(element);
+
+    String sysAs = getImportInfoDefN(getBeanFactorySysDartLibUri).value;
     return render(codeTemplate, <String, dynamic>{
       'imports': imports
           .map((item) => {
@@ -50,7 +56,51 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
               .toList()),
       'createBeanInstanceBySysCreator': beanInstanceGenerator
           .generateBeanSwitchInstance(beanSysCreatorMap.values.toList()),
+      'invokeMethods': beanMap.entries
+          .where((e) => e.value.methods.isNotEmpty)
+          .map((e) => e.value)
+          .map((e) =>
+              'case ${e.clsType_} : return ${sysAs}.invoke${e.clsType}Methods(bean, methodName,    params: params);')
+          .reduce((v, e) => v + e),
+      'getFields': beanMap.entries
+          .where((e) => e.value.fields.isNotEmpty)
+          .map((e) => e.value)
+          .map((e) =>
+              'case ${e.clsType_} : return ${sysAs}.get${e.clsType}Fields(bean, fieldName);')
+          .reduce((v, e) => v + e),
+      'setFields': beanMap.entries
+          .where((e) => e.value.fields.isNotEmpty)
+          .map((e) => e.value)
+          .map((e) =>
+              'case ${e.clsType_} :  ${sysAs}.set${e.clsType}Fields(bean, fieldName, value);break;')
+          .reduce((v, e) => v + e),
+      'getAllFields': beanMap.entries
+          .where((e) => e.value.fields.isNotEmpty)
+          .map((e) => e.value)
+          .map((e) =>
+              'case ${e.clsType_} : return ${sysAs}.get${e.clsType}AllFields(bean);')
+          .reduce((v, e) => v + e),
+      'setAllFields': beanMap.entries
+          .where((e) => e.value.fields.isNotEmpty)
+          .map((e) => e.value)
+          .map((e) =>
+              'case ${e.clsType_} : ${sysAs}.set${e.clsType}AllFields(bean,values);break;')
+          .reduce((v, e) => v + e),
     });
+  }
+
+  String _genBeanFactoryDartFileUri(Element element) {
+    String wUri = element.librarySource.uri.toString();
+    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
+    wUri += ".bf.aymtools.dart";
+    return wUri;
+  }
+
+  String _genBeanFactorySysDartFileUri(Element element) {
+    String wUri = element.librarySource.uri.toString();
+    wUri = wUri.substring(0, wUri.lastIndexOf(".dart"));
+    wUri += ".sys.bf.aymtools.dart";
+    return wUri;
   }
 
   static Pair<String, String> parseAAddImportList(
@@ -109,6 +159,34 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
     return asStrTemp;
   }
 
-  static Pair<String, String> getImportInfo(String uri) =>
-      imports.firstWhere((p) => p.key == uri);
+  static Pair<String, String> getImportInfo(String uri,
+          {Pair<String, String> orElse()}) =>
+      imports.firstWhere((p) => p.key == uri, orElse: orElse);
+
+  static Pair<String, String> getImportInfoDefN(String uri) =>
+      getImportInfo(uri, orElse: () => Pair('', ''));
+
+  static String getBeanFactoryDartLibUri = _beanFactoryDartFileUri;
+
+  static String getBeanFactorySysDartLibUri = _beanFactorySysDartFileUri;
+
+  static List<GBean> getGBeans(bool test(GBean bean)) =>
+      beanMap.values.where(test);
+
+  static List<GBean> getGBeansForAnnotation(Type annotationType) {
+    TypeChecker checker = TypeChecker.fromRuntime(annotationType);
+    return getGBeans((bean) => bean.annotation.instanceOf(checker));
+  }
+
+  static GBean getGBeanForClassElement(Element element) {
+    if (element.kind != ElementKind.CLASS) return null;
+    return getGBeanForDartFile(
+        element.librarySource.uri.toString(), element.name);
+  }
+
+  static GBean getGBeanForDartFile(String librarySourceUri, String className) {
+    return getGBeans((bean) =>
+            bean.sourceUri == librarySourceUri && bean.typeName == className)
+        ?.first;
+  }
 }

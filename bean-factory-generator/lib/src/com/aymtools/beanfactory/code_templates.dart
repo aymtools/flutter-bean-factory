@@ -200,5 +200,38 @@ class BeanFactory {
      {{{createBeanInstanceBySysCreator}}}
   }
   
+  dynamic invokeMethod(dynamic bean, String methodName,
+      {Map<String, dynamic> params}) {
+    switch (bean.runtimeType) {
+       {{{invokeMethods}}}
+    }
+    throw NoSuchMethodException(bean.runtimeType , methodName);
+  }
+
+  dynamic getField(dynamic bean, String fieldName) {
+    switch (bean.runtimeType) {
+        {{{getFields}}}
+    }
+    throw NoSuchFieldException(bean.runtimeType , fieldName);
+  }
+
+  void setField(dynamic bean, String fieldName, dynamic value) {
+    switch (bean.runtimeType) {
+        {{{setFields}}}
+    }
+    throw NoSuchFieldException(bean.runtimeType , fieldName);
+  }
+
+  dynamic getFields(dynamic bean) {
+    switch (bean.runtimeType) {
+        {{{getAllFields}}}
+    }
+  }
+
+  void setFields(dynamic bean, Map<String, dynamic> values) {
+    switch (bean.runtimeType) {
+        {{{setAllFields}}}
+    }
+  }
 }
 """;

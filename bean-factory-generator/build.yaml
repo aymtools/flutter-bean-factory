@@ -48,7 +48,7 @@ builders:
   bean_factory_gen_sys_creator_builder:
     import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
     builder_factories: ['genSysCreatorBuilder']
-    build_extensions: { '.dart': ['.sys.creator.bf.aymtools.dart'] }
+    build_extensions: { '.dart': ['.sys.bf.aymtools.dart'] }
     auto_apply: root_package
     build_to: source
   bean_factory_builder:

@@ -96,7 +96,6 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
             annotation.peek('scanMethodsUsedBlackList').boolValue;
     bool scanSuperMethods = !annotation.peek('scanSuperMethods').isNull &&
         annotation.peek('scanSuperMethods').boolValue;
-
     GBean rp = GBean(
       uriKey,
       e,
@@ -133,6 +132,7 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
           : [],
     );
 
+//    print("${rp.elementName}:$scanMethods: ${rp.methods.length} : ");
     if (rp.constructors.length == 0) {
       //只有命名构造函数 切没有加上BeanConstructor的注释 表示无法生成此Bean的构造函数
       BeanFactoryGenerator.beanParseErrorMap[rp.uri] = rp;
@@ -188,7 +188,7 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
             scanUsedWhiteList ||
             _beanMethodNotAnnotation.firstAnnotationOf(ele) == null)
         .map((e) =>
-            Pair(e, ConstantReader(_beanFieldAnnotation.firstAnnotationOf(e))))
+            Pair(e, ConstantReader(_beanMethodAnnotation.firstAnnotationOf(e))))
         .where((e) => e.value != null && !e.value.isNull || !scanUsedWhiteList)
         .map((e) => GBeanMethod(
             e.key, e.value, _parseGBeanFunctionParams(e.key.parameters)))
@@ -257,19 +257,24 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
 }
 
 class GBeanCreatorBySysGenerator {
-  String generateBeanSwitchConstructorInstance(GBean gBean) {
+  String generateBeanSwitchConstructorInstance(GBean gBean,
+      String namedConstructorInUri, String paramsMapName, String objParamName) {
     StringBuffer stringBuffer = StringBuffer();
-    stringBuffer.writeln("  switch (namedConstructorInUri) {");
+    stringBuffer.writeln("${gBean.clsType_} beanInstance;");
+    stringBuffer.writeln("  switch ($namedConstructorInUri) {");
     gBean.constructors.forEach((pair) {
       GBeanConstructor constructor = pair.value;
 
+      String resultStr = 'beanInstance';
+
       String newBeanCMD =
           "${gBean.typeAsStr}.${gBean.typeName}${'' == constructor.namedConstructor ? '' : '.${constructor.namedConstructor}'}";
+
       stringBuffer.writeln("    case '${constructor.namedConstructorInUri}' :");
       stringBuffer.writeln("");
       List<String> gpsccnp =
-          _generateBeanSwitchConstructorCheckNumParamsInstance(
-                  constructor, newBeanCMD)
+          _generateBeanSwitchConstructorCheckNumParamsInstance(constructor,
+                  paramsMapName, objParamName, resultStr, newBeanCMD)
               .where((ifStr) => ifStr != "")
               .toList();
       if (gpsccnp.length > 0) {
@@ -281,8 +286,8 @@ class GBeanCreatorBySysGenerator {
         //当所有条件都不满足时 但路由有无参的构造函数 时使用无参的构造函数来 创建
         if (constructor.params.length == 0 ||
             constructor.canCreateForNoParams) {
-          stringBuffer
-              .write(_generateBeanConstructorParams(newBeanCMD, [], []));
+          stringBuffer.write(_generateBeanConstructorOrFunctionParams(
+              resultStr, newBeanCMD, [], []));
         }
         stringBuffer.writeln("        }");
       }
@@ -292,16 +297,21 @@ class GBeanCreatorBySysGenerator {
       stringBuffer.writeln("      break;");
     });
     stringBuffer.writeln("  }");
+    stringBuffer.writeln("return beanInstance;");
     return stringBuffer.toString();
   }
 
   List<String> _generateBeanSwitchConstructorCheckNumParamsInstance(
-      GBeanConstructor constructor, String newBeanCMD) {
+      GBeanConstructor constructor,
+      String paramsMapName,
+      String objParamName,
+      String resultStr,
+      String newBeanCMD) {
     List<String> result = [];
     //无参构造函数
     if (constructor.canCreateForNoParams) {
       result.add(
-          "if (mapParam == null && objParam == null) {beanInstance=$newBeanCMD();}");
+          "if ($paramsMapName == null && $objParamName == null) {$resultStr=$newBeanCMD();}");
     }
 
     //仅使用传入参数的构造函数 非Map
@@ -317,28 +327,30 @@ class GBeanCreatorBySysGenerator {
       StringBuffer codeBuffer = StringBuffer();
       //map 交给下边处理 这里略过map
       if (!param.isTypeDartCoreMap) {
-        codeBuffer.write("if (mapParam == null && objParam != null)  {");
+        codeBuffer
+            .write("if ($paramsMapName == null && $objParamName != null)  {");
         String paramType = param.paramType;
-        codeBuffer.write("if (objParam is $paramType) {");
-        codeBuffer.write(
-            _generateBeanConstructorOneParams(param, newBeanCMD, "objParam"));
+        codeBuffer.write("if ($objParamName is $paramType) {");
+        codeBuffer.write(_generateBeanConstructorOneParams(
+            resultStr, newBeanCMD, param, "$objParamName"));
         codeBuffer.write("}");
         if (param.isTypeDartCoreString) {
-          codeBuffer.write("else if((objParam is num)||(objParam is bool)){");
+          codeBuffer.write(
+              "else if(($objParamName is num)||($objParamName is bool)){");
           codeBuffer.write(_generateBeanConstructorOneParams(
-              param, newBeanCMD, "objParam.toString()"));
+              resultStr, newBeanCMD, param, "$objParamName.toString()"));
           codeBuffer.write("}");
         } else if (param.isTypeDartCoreBase) {
-          codeBuffer.write("else if(objParam is String){");
+          codeBuffer.write("else if($objParamName is String){");
           if (param.type.isDartCoreBool) {
-            codeBuffer.write(_generateBeanConstructorOneParams(
-                param, newBeanCMD, "'true'==objParam ? true : false"));
+            codeBuffer.write(_generateBeanConstructorOneParams(resultStr,
+                newBeanCMD, param, "'true'==$objParamName ? true : false"));
           } else if (param.type.isDartCoreInt) {
             codeBuffer.write(_generateBeanConstructorOneParams(
-                param, newBeanCMD, "int.tryParse(objParam)"));
+                resultStr, newBeanCMD, param, "int.tryParse($objParamName)"));
           } else if (param.type.isDartCoreDouble) {
-            codeBuffer.write(_generateBeanConstructorOneParams(
-                param, newBeanCMD, "double.tryParse(objParam)"));
+            codeBuffer.write(_generateBeanConstructorOneParams(resultStr,
+                newBeanCMD, param, "double.tryParse($objParamName)"));
           }
           codeBuffer.write("}");
         }
@@ -361,9 +373,9 @@ class GBeanCreatorBySysGenerator {
         ///uri中无参数 只有传入的Map参数
         StringBuffer codeBuffer = StringBuffer();
         codeBuffer.write(
-            "if (mapParam != null && mapParam == objParam && objParam is Map<String,dynamic>)  {");
-        codeBuffer.write(
-            _generateBeanConstructorOneParams(param, newBeanCMD, "objParam"));
+            "if ($paramsMapName != null && $paramsMapName == $objParamName && $objParamName is Map<String,dynamic>)  {");
+        codeBuffer.write(_generateBeanConstructorOneParams(
+            resultStr, newBeanCMD, param, objParamName));
         codeBuffer.write("}");
         result.add(codeBuffer.toString());
       }
@@ -377,27 +389,30 @@ class GBeanCreatorBySysGenerator {
       StringBuffer codeBuffer = StringBuffer();
       /////有且只有路径参数
       codeBuffer.clear();
-      codeBuffer.write("if (mapParam != null && objParam == null)  {");
-      codeBuffer.write(
-          _generateBeanConstructorOneParams(param, newBeanCMD, "mapParam"));
+      codeBuffer
+          .write("if ($paramsMapName != null && $objParamName == null)  {");
+      codeBuffer.write(_generateBeanConstructorOneParams(
+          resultStr, newBeanCMD, param, paramsMapName));
       codeBuffer.write("}");
       result.add(codeBuffer.toString());
 
       //同时包含了路径参数和传入的map参数
       codeBuffer.clear();
-      codeBuffer.write("if (mapParam != null &&  objParam != null && "
-          " mapParam != objParam && (objParam is Map<String, dynamic>))  {");
       codeBuffer.write(
-          _generateBeanConstructorOneParams(param, newBeanCMD, "mapParam"));
+          "if ($paramsMapName != null &&  $objParamName != null && "
+          " $paramsMapName != $objParamName && ($objParamName is Map<String, dynamic>))  {");
+      codeBuffer.write(_generateBeanConstructorOneParams(
+          resultStr, newBeanCMD, param, paramsMapName));
       codeBuffer.write("}");
       result.add(codeBuffer.toString());
 
       //同时包含了路径参数和传入的map参数
       codeBuffer.clear();
-      codeBuffer.write("if (mapParam != null &&  objParam != null && "
-          " mapParam != objParam && (objParam is Map<String, dynamic>))  {");
       codeBuffer.write(
-          _generateBeanConstructorOneParams(param, newBeanCMD, "mapParam"));
+          "if ($paramsMapName != null &&  $objParamName != null && "
+          " $paramsMapName != $objParamName && ($objParamName is Map<String, dynamic>))  {");
+      codeBuffer.write(_generateBeanConstructorOneParams(
+          resultStr, newBeanCMD, param, paramsMapName));
       codeBuffer.write("}");
       result.add(codeBuffer.toString());
     }
@@ -416,8 +431,10 @@ class GBeanCreatorBySysGenerator {
 
       StringBuffer codeBuffer = StringBuffer();
       if (param1.isTypeDartCoreMap) {
-        codeBuffer.write("if (mapParam == null && objParam==null) {");
-        codeBuffer.write(_generateBeanConstructorParams(newBeanCMD, [
+        codeBuffer
+            .write("if ($paramsMapName == null && $objParamName==null) {");
+        codeBuffer.write(
+            _generateBeanConstructorOrFunctionParams(resultStr, newBeanCMD, [
           param1,
           param2
         ], [
@@ -425,33 +442,38 @@ class GBeanCreatorBySysGenerator {
           "${_generateBeanParamDefValueByDartCoreTypeBase(param2)}"
         ]));
         codeBuffer.write("}");
-        codeBuffer.write("else if (mapParam != null && objParam==null) {");
-        codeBuffer.write(_generateBeanConstructorParams(newBeanCMD, [
+        codeBuffer
+            .write("else if ($paramsMapName != null && $objParamName==null) {");
+        codeBuffer.write(_generateBeanConstructorOrFunctionParams(
+            resultStr, newBeanCMD, [
           param1,
           param2
         ], [
           "${_generateBeanParamDefValueByDartCoreTypeBase(param1)}",
-          "mapParam"
+          paramsMapName
         ]));
         codeBuffer.write("}");
         codeBuffer.write(
-            "else if (mapParam == null && objParam!=null && (objParam is Map<String, dynamic>)) {");
-        codeBuffer.write(_generateBeanConstructorParams(newBeanCMD, [
+            "else if ($paramsMapName == null && $objParamName!=null && ($objParamName is Map<String, dynamic>)) {");
+        codeBuffer.write(_generateBeanConstructorOrFunctionParams(
+            resultStr, newBeanCMD, [
           param1,
           param2
         ], [
-          "objParam",
+          objParamName,
           "${_generateBeanParamDefValueByDartCoreTypeBase(param2)}"
         ]));
         codeBuffer.write("}");
         codeBuffer.write(
-            "else if (mapParam != null && objParam!=null && (objParam is Map<String, dynamic>)) {");
-        codeBuffer.write(_generateBeanConstructorParams(
-            newBeanCMD, [param1, param2], ["objParam", "mapParam"]));
+            "else if ($paramsMapName != null && $objParamName!=null && ($objParamName is Map<String, dynamic>)) {");
+        codeBuffer.write(_generateBeanConstructorOrFunctionParams(resultStr,
+            newBeanCMD, [param1, param2], [objParamName, paramsMapName]));
         codeBuffer.write("}");
       } else {
-        codeBuffer.write("if (mapParam == null && objParam==null) {");
-        codeBuffer.write(_generateBeanConstructorParams(newBeanCMD, [
+        codeBuffer
+            .write("if ($paramsMapName == null && $objParamName==null) {");
+        codeBuffer.write(
+            _generateBeanConstructorOrFunctionParams(resultStr, newBeanCMD, [
           param1,
           param2
         ], [
@@ -459,29 +481,32 @@ class GBeanCreatorBySysGenerator {
           "${_generateBeanParamDefValueByDartCoreTypeBase(param2)}"
         ]));
         codeBuffer.write("}");
-        codeBuffer.write("else if (mapParam != null && objParam==null) {");
-        codeBuffer.write(_generateBeanConstructorParams(newBeanCMD, [
+        codeBuffer
+            .write("else if ($paramsMapName != null && $objParamName==null) {");
+        codeBuffer.write(_generateBeanConstructorOrFunctionParams(
+            resultStr, newBeanCMD, [
           param1,
           param2
         ], [
           "${_generateBeanParamDefValueByDartCoreTypeBase(param1)}",
-          "mapParam"
+          paramsMapName
         ]));
         codeBuffer.write("}");
         codeBuffer.write(
-            "else if (mapParam == null && objParam!=null && (objParam is ${param1.paramType}) && !(objParam is Map<String, dynamic>)) {");
-        codeBuffer.write(_generateBeanConstructorParams(newBeanCMD, [
+            "else if ($paramsMapName == null && $objParamName!=null && ($objParamName is ${param1.paramType}) && !($objParamName is Map<String, dynamic>)) {");
+        codeBuffer.write(_generateBeanConstructorOrFunctionParams(
+            resultStr, newBeanCMD, [
           param1,
           param2
         ], [
-          "objParam",
+          objParamName,
           "${_generateBeanParamDefValueByDartCoreTypeBase(param2)}"
         ]));
         codeBuffer.write("}");
         codeBuffer.write(
-            "else if (mapParam != null && objParam!=null && (objParam is ${param1.paramType}) && !(objParam is Map<String, dynamic>)) {");
-        codeBuffer.write(_generateBeanConstructorParams(
-            newBeanCMD, [param1, param2], ["objParam", "mapParam"]));
+            "else if ($paramsMapName != null && $objParamName!=null && ($objParamName is ${param1.paramType}) && !($objParamName is Map<String, dynamic>)) {");
+        codeBuffer.write(_generateBeanConstructorOrFunctionParams(resultStr,
+            newBeanCMD, [param1, param2], [objParamName, paramsMapName]));
         codeBuffer.write("}");
       }
 
@@ -494,30 +519,52 @@ class GBeanCreatorBySysGenerator {
             !(constructor.params[0].value.isTypeDartCoreMap &&
                 "" == constructor.params[0].value.key))) {
       result.add(
-          "if(mapParam!=null) {${_generateBeanSwitchConstructorParamsForMapInstance(constructor, newBeanCMD)}\n}");
+          "if($paramsMapName!=null) {${generateBeanSwitchConstructorOrFunctionParamsForMap(resultStr, newBeanCMD, constructor.params.map((pair) => pair.value).toList(), paramsMapName)}\n}");
     }
     return result;
   }
 
-  String _generateBeanSwitchConstructorParamsForMapInstance(
-      GBeanConstructor constructor, String newBeanCMD) {
-    List<GBeanParam> params =
-        constructor.params.map((pair) => pair.value).toList();
+  String generateBeanSwitchGBeanMethodInvoker(
+      GBean bean, String methodName, String beanName, String paramsMapName) {
+    StringBuffer stringBuffer = StringBuffer();
+    stringBuffer.writeln("  switch ($methodName) {");
+    bean.methods.map((e) => e.value).forEach((m) {
+      stringBuffer.writeln("case '${m.methodNameKey}' : ");
+      String ifStr = generateBeanSwitchConstructorOrFunctionParamsForMap(
+          m.isResultVoid ? '' : 'dynamic result',
+          "$beanName.${m.methodName}",
+          m.params.map((e) => e.value).toList(),
+          paramsMapName,
+          cmdAfter: [m.isResultVoid ? 'return ;' : 'return result;']);
+      stringBuffer.writeln(ifStr);
+      if (ifStr.trimLeft().startsWith("if")) {
+        stringBuffer.writeln(
+            "throw IllegalArgumentException(${bean.clsType_},'${m.methodName}', [${m.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.paramType})").reduce((v, e) => "$v,$e")}], $paramsMapName.entries.map((e)=>Pair(e.key, e.value.runtimeType)).toList()); ");
+      } else {
+        stringBuffer.writeln("break;");
+      }
+    });
+    stringBuffer.writeln("  }");
+    return stringBuffer.toString();
+  }
 
+  String generateBeanSwitchConstructorOrFunctionParamsForMap(String resultStr,
+      String CMD, List<GBeanParam> params, String paramsMapName,
+      {List<String> cmdAfter = const []}) {
     List<GBeanParam> paramsNamed = params.where((p) => p.isNamed).toList();
 
     List<_IFGenerator> paramsNeed = params
         .where((p) => !p.isNamed)
-        .map((p) => _IFGenerator(p, isSelect: true))
+        .map((p) => _IFGenerator(p, paramsMapName, isSelect: true))
         .toList();
-    List<_IFGenerator> noParamsNeedCanCreate;
+    List<_IFGenerator> noParamsNeedCanRun;
 
-    String ifsStr = _combination(paramsNamed)
+    String ifsStr = _combination(paramsNamed, paramsMapName)
         .where((list) {
           dynamic no = findFistWhere(list, (p) => p.isSelect);
 
           if (no == null) {
-            noParamsNeedCanCreate = list;
+            noParamsNeedCanRun = list;
           }
 
           return no != null;
@@ -527,8 +574,9 @@ class GBeanCreatorBySysGenerator {
           r.addAll(list);
           return r;
         })
-        .map((list) => _generateBeanSwitchConstructorParamsForMapIfInstance(
-            list, newBeanCMD))
+        .map((list) => _generateBeanSwitchConstructorOrFunctionParamsForMapIf(
+            resultStr, CMD, list,
+            cmdAfter: cmdAfter))
         .where((str) => "" != str)
         .map((ifs) => "\n$ifs else ")
         .fold("", (i, s) => "$i$s");
@@ -538,25 +586,33 @@ class GBeanCreatorBySysGenerator {
     }
 
     ////需要单独处理 当named参数全不选时的状况
-    if (noParamsNeedCanCreate != null) {
+    if (noParamsNeedCanRun != null) {
       if (paramsNeed.length == 0) {
         if (ifsStr.trimLeft().startsWith("if")) {
           ifsStr +=
-              "else {${_generateBeanConstructorParams(newBeanCMD, [], [])}}";
+              "else {${_generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [], cmdAfter: cmdAfter)}}";
         } else {
-          ifsStr += "${_generateBeanConstructorParams(newBeanCMD, [], [])}";
+          ifsStr +=
+              "${_generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [], cmdAfter: cmdAfter)}";
         }
       } else {
-        ifsStr += _generateBeanSwitchConstructorParamsForMapIfInstance(
-            paramsNeed, newBeanCMD);
+        if (ifsStr.trimLeft().startsWith("if")) {
+          ifsStr +=
+              "else ${_generateBeanSwitchConstructorOrFunctionParamsForMapIf(resultStr, CMD, paramsNeed, cmdAfter: cmdAfter)}";
+        } else {
+          ifsStr += _generateBeanSwitchConstructorOrFunctionParamsForMapIf(
+              resultStr, CMD, paramsNeed,
+              cmdAfter: cmdAfter);
+        }
       }
     }
 
     return (ifsStr);
   }
 
-  String _generateBeanSwitchConstructorParamsForMapIfInstance(
-      List<_IFGenerator> params, String newBeanCMD) {
+  String _generateBeanSwitchConstructorOrFunctionParamsForMapIf(
+      String resultStr, String CMD, List<_IFGenerator> params,
+      {List<String> cmdAfter = const []}) {
     BoxThree<String, List<String>, String> bt = params
 //        .where((ifg) => ifg.isSelect)
         .map((ifg) =>
@@ -569,7 +625,7 @@ class GBeanCreatorBySysGenerator {
     });
 
     String r =
-        "if (${bt.a.trimRight().endsWith("&&") ? bt.a.substring(0, bt.a.length - 3) : bt.a} ) { ${bt.c.trim()} \n ${_generateBeanConstructorParams(newBeanCMD, params.where((ifg) => ifg.isSelect).map((ifg) => ifg.param).toList(), bt.b)} \n }";
+        "if (${bt.a.trimRight().endsWith("&&") ? bt.a.substring(0, bt.a.length - 3) : bt.a} ) { ${bt.c.trim()} \n ${_generateBeanConstructorOrFunctionParams(resultStr, CMD, params.where((ifg) => ifg.isSelect).map((ifg) => ifg.param).toList(), bt.b, cmdAfter: cmdAfter)} \n }";
 
     return r;
   }
@@ -580,18 +636,19 @@ class GBeanCreatorBySysGenerator {
   }
 
 //相比穷举的快速生成方案 参考自来源https://zhenbianshu.github.io/2019/01/charming_alg_permutation_and_combination.html
-  List<List<_IFGenerator>> _combination(List<GBeanParam> source) {
+  List<List<_IFGenerator>> _combination(
+      List<GBeanParam> source, String paramsMapName) {
     List<List<_IFGenerator>> result = [<_IFGenerator>[]];
 
     //将所有的参数全必选的选项加入到返回结果中
     result.add(_cloneListParams(source)
-        .map((p) => _IFGenerator(p, isSelect: true))
+        .map((p) => _IFGenerator(p, paramsMapName, isSelect: true))
         .toList(growable: true));
 
     for (int i = 1; i < Math.pow(2, source.length) - 1; i++) {
 //      Set<RoutePageParam> eligibleCollections = Set();
       List<_IFGenerator> paras = _cloneListParams(source)
-          .map((p) => _IFGenerator(p))
+          .map((p) => _IFGenerator(p, paramsMapName))
           .toList(growable: true);
       // 依次将数字 i 与 2^n 按位与，判断第 n 位是否为 1
       for (int j = 0; j < source.length; j++) {
@@ -604,29 +661,32 @@ class GBeanCreatorBySysGenerator {
     }
     //将所有的参数全不选的选项加入到返回结果中
     result.add(_cloneListParams(source)
-        .map((p) => _IFGenerator(p))
+        .map((p) => _IFGenerator(p, paramsMapName))
         .toList(growable: true));
     return result;
   }
 
   String _generateBeanConstructorOneParams(
-      GBeanParam param, String newBeanCMD, String value) {
-//    if (param.isNamed) {
-//      return ("beanInstance=$newBeanCMD(${param.keyInFun}:$value);");
-//    } else {
-//      return ("beanInstance=$newBeanCMD($value);");
-//    }
-    return _generateBeanConstructorParams(newBeanCMD, [param], [value]);
+      String resultStr, String newBeanCMD, GBeanParam param, String value,
+      {List<String> cmdAfter = const []}) {
+    return _generateBeanConstructorOrFunctionParams(
+        resultStr, newBeanCMD, [param], [value],
+        cmdAfter: cmdAfter);
   }
 
-  String _generateBeanConstructorParams(
-      String newBeanCMD, List<GBeanParam> params, List<String> values) {
+  String _generateBeanConstructorOrFunctionParams(String resultStr, String CMD,
+      List<GBeanParam> params, List<String> values,
+      {List<String> cmdAfter = const []}) {
     if (params.length != values.length)
       throw Exception(
-          "_generateBeanConstructorParams params.length!=values.length");
+          "_generateBeanConstructorOrFunctionParams params.length!=values.length");
 
     StringBuffer codeBuffer = StringBuffer();
-    codeBuffer.write("beanInstance=$newBeanCMD(");
+    if (resultStr.isEmpty) {
+      codeBuffer.write("$CMD(");
+    } else {
+      codeBuffer.write("$resultStr=$CMD(");
+    }
     for (var i = 0; i < params.length; i++) {
       GBeanParam param = params[i];
       String value = values[i];
@@ -635,12 +695,14 @@ class GBeanCreatorBySysGenerator {
       } else {
         codeBuffer.write("$value");
       }
-
       if (i < params.length - 1) {
         codeBuffer.write(",");
       }
     }
     codeBuffer.write(");");
+    if (cmdAfter.isNotEmpty) {
+      codeBuffer.write(cmdAfter.reduce((v, e) => v + e));
+    }
     return codeBuffer.toString();
   }
 
@@ -667,31 +729,34 @@ class GBeanCreatorBySysGenerator {
 }
 
 class _IFGenerator {
-  GBeanParam param;
-  bool isSelect = false;
-  List<String> otherContent = [];
+  final GBeanParam param;
+  final String paramsMapName;
+  bool isSelect;
 
-  _IFGenerator(this.param, {this.isSelect = false});
+  final List<String> otherContent;
+
+  _IFGenerator(this.param, this.paramsMapName,
+      {this.isSelect = false, this.otherContent = const []});
 
   String get whereStr {
-    if (!isSelect) return "!mapParam.containsKey('${param.keyInMaps}')";
+    if (!isSelect) return "!$paramsMapName.containsKey('${param.keyInMaps}')";
     String w = "";
     if ("String" == param.paramType) {
-      w = "(mapParam.containsKey('${param.keyInMaps}') && "
-          "(mapParam['${param.keyInMaps}'] is ${param.paramType} "
-          "|| mapParam['${param.keyInMaps}'] is num || mapParam['${param.keyInMaps}'] is bool))";
+      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} "
+          "|| $paramsMapName['${param.keyInMaps}'] is num || $paramsMapName['${param.keyInMaps}'] is bool))";
     } else if ("int" == param.paramType) {
-      w = "(mapParam.containsKey('${param.keyInMaps}') && "
-          "(mapParam['${param.keyInMaps}'] is ${param.paramType} || mapParam['${param.keyInMaps}'] is String))";
+      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
     } else if ("double" == param.paramType) {
-      w = "(mapParam.containsKey('${param.keyInMaps}') && "
-          "(mapParam['${param.keyInMaps}'] is ${param.paramType} || mapParam['${param.keyInMaps}'] is String))";
+      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
     } else if ("bool" == param.paramType) {
-      w = "(mapParam.containsKey('${param.keyInMaps}') && "
-          "(mapParam['${param.keyInMaps}'] is ${param.paramType} || mapParam['${param.keyInMaps}'] is String))";
+      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
     } else {
-      w = "(mapParam.containsKey('${param.keyInMaps}') && "
-          "(mapParam['${param.keyInMaps}'] is ${param.paramType}))";
+      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType}))";
     }
     return w;
   }
@@ -700,18 +765,18 @@ class _IFGenerator {
     if (!isSelect) return "";
     String c = "";
     if ("String" == param.paramType) {
-      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : mapParam['${param.keyInMaps}'].toString()";
+      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : $paramsMapName['${param.keyInMaps}'].toString()";
     } else if ("int" == param.paramType) {
-      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : "
-          "(int.parse( mapParam['${param.keyInMaps}']) )";
+      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
+          "(int.parse( $paramsMapName['${param.keyInMaps}']) )";
     } else if ("double" == param.paramType) {
-      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : "
-          "(double.parse( mapParam['${param.keyInMaps}']) )";
+      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
+          "(double.parse( $paramsMapName['${param.keyInMaps}']) )";
     } else if ("bool" == param.paramType) {
-      c = "mapParam['${param.keyInMaps}'] is ${param.paramType} ? mapParam['${param.keyInMaps}'] as ${param.paramType} : "
-          "('true'==mapParam['${param.keyInMaps}'] ? true : false )";
+      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
+          "('true'==$paramsMapName['${param.keyInMaps}'] ? true : false )";
     } else {
-      c = "mapParam['${param.keyInMaps}'] as ${param.paramType}";
+      c = "$paramsMapName['${param.keyInMaps}'] as ${param.paramType}";
     }
     return c;
   }
@@ -720,8 +785,8 @@ class _IFGenerator {
       otherContent.fold("", (i, n) => "$i $n \n").trimRight();
 
   _IFGenerator clone() {
-    _IFGenerator r = _IFGenerator(param, isSelect: isSelect);
-    r.otherContent = cloneList(otherContent, (s) => s);
+    _IFGenerator r = _IFGenerator(param, paramsMapName,
+        isSelect: isSelect, otherContent: cloneList(otherContent, (s) => s));
     return r;
   }
 }

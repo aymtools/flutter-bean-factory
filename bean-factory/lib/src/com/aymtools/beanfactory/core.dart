@@ -317,4 +317,48 @@ abstract class BeanCustomCreatorBase<Bean> {
       dynamic objParam);
 }
 
+class NoSuchMethodException implements Exception {
+  final Type type;
+  final String methodName;
+  final message;
 
+  NoSuchMethodException(this.type, this.methodName, {this.message});
+
+  String toString() {
+    String def = "NoSuchMethodException:\n${type}\n$methodName not found !";
+    if (message == null) return def;
+    return "$def: $message";
+  }
+}
+
+class NoSuchFieldException implements Exception {
+  final Type type;
+  final String fieldName;
+  final message;
+
+  NoSuchFieldException(this.type, this.fieldName, {this.message});
+
+  String toString() {
+    String def = "NoSuchFieldException:\n${type}\n$fieldName not found !";
+    if (message == null) return def;
+    return "$def: $message";
+  }
+}
+
+class IllegalArgumentException implements Exception {
+  final Type type;
+  final String name;
+  final List<Pair<String,Type>> paramsTypes;
+  final List<Pair<String,Type>> valuesTypes;
+  final message;
+
+  IllegalArgumentException(
+      this.type, this.name, this.paramsTypes, this.valuesTypes,
+      {this.message});
+
+  String toString() {
+    String def = "IllegalArgumentException:\n${type}\n$name illegal argument !";
+    if (message == null) return def;
+    return "$def: $message";
+  }
+}
