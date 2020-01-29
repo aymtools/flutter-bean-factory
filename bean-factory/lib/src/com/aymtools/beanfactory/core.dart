@@ -1,6 +1,6 @@
 /// 定义Bean生成器注解 dart特殊机制 自动化的入口
 class Factory {
-  ///表示存在在其他类库中的 Bean 路径 可以自动分模块引用 当当前模块优先级 最高
+  ///表示存在在其他类库中的 Bean 路径 可以自动分模块引用 当当前模块优先级 最高  被指明的类必须使用 FactoryLibExport注解
   final List<Type> otherFactory;
 
   ///表示存在在其他类库中的 Bean 路径 可以自动分模块引用 当当前模块优先级 最高
@@ -17,8 +17,8 @@ class Factory {
 }
 
 /// 定义类库相关的Bean类自动导出 就是写库 让库中的 Bean BeanCreator 自动生成lib文件
-class FactoryLibExport {
-  const FactoryLibExport();
+class BeanFactoryLibExport {
+  const BeanFactoryLibExport();
 }
 
 abstract class _BeanBase {

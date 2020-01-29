@@ -8,7 +8,7 @@ import 'package:source_gen/source_gen.dart';
 
 import 'generator_factory.dart';
 
-class ExportLibGenerator extends GeneratorForAnnotation<FactoryLibExport> {
+class ExportLibGenerator extends GeneratorForAnnotation<BeanFactoryLibExport> {
   @override
   FutureOr<String> generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) {

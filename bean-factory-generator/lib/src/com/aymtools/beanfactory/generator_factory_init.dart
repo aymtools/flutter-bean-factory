@@ -7,9 +7,14 @@ import 'package:source_gen/source_gen.dart';
 import 'generator_factory.dart';
 
 class BeanFactoryInitGenerator extends GeneratorForAnnotation<Factory> {
+  static bool _isAlready = false;
+
   @override
   generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) {
+    if (_isAlready) return null;
+    _isAlready = true;
+
     if (annotation != null &&
         annotation.peek('otherImports') != null &&
         annotation.peek('otherImports').listValue.isNotEmpty) {

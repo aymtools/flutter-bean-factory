@@ -15,6 +15,7 @@ var _num = 0;
 Builder initBuilder(BuilderOptions options) {
   _num++;
   print("run number:$_num");
+  if (_num > 1) return null;
   return LibraryBuilder(BeanFactoryInitGenerator(),
       generatedExtension: ".init.bf.aymtools.dart");
 }
