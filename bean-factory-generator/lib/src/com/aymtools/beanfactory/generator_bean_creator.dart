@@ -6,8 +6,6 @@ import 'package:source_gen/source_gen.dart';
 import 'entities.dart';
 import 'generator_factory.dart';
 
-import 'package:analyzer/dart/element/type.dart';
-
 class ScanBeanCreatorGenerator extends GeneratorForAnnotation<BeanCreator> {
   TypeChecker _customCreatorChecker =
       TypeChecker.fromRuntime(BeanCustomCreatorBase);

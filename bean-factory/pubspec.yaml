@@ -1,8 +1,7 @@
 name: bean_factory
-description: Bean factory core libraries.
+description: Bean factory core Dart libraries.A pre-compiled class image containing the contents of the constructor, methods, and properties. Need to use with bean_factory_generator.
 version: 1.0.0
-# homepage: https://www.example.com
-author: anyamming <anyaming0@gmail.com>
+homepage: https://github.com/aymtools/flutter-bean-factory
 
 environment:
   sdk: '>=2.5.0 <3.0.0'
