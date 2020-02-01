@@ -56,9 +56,9 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
     KeyGen keyGen = KeyGenByClassName();
     if (!(annotation.peek('keyGen').isNull ||
         annotation.peek('keyGen').objectValue.isNull ||
-        '' == annotation.peek('keyGen').objectValue.type.name)) {
+        '' == annotation.peek('keyGen').objectValue.type.getDisplayString())) {
       keyGen = BeanFactoryGenerator
-          .keyGens[annotation.peek('keyGen').objectValue.type.name];
+          .keyGens[annotation.peek('keyGen').objectValue.type.getDisplayString()];
     }
     if (keyGen == null) {
       keyGen = KeyGenByClassName();
@@ -219,7 +219,7 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
               e.b,
               e.c.key,
               e.c.value,
-              e.a.type.name,
+              e.a.type.getDisplayString(),
               e.a.type,
               e.a.runtimeType,
             ))
@@ -246,7 +246,7 @@ class ScanBeanGenerator extends GeneratorForAnnotation<Bean> {
               e.a.isNamed,
               e.c.key,
               e.c.value,
-              e.a.type.name,
+              e.a.type.getDisplayString(),
               e.a.type,
               e.a.runtimeType,
             ))

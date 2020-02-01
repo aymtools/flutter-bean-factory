@@ -170,7 +170,7 @@ class GBean extends _Tag {
   String get clsType_ =>
       "" == typeAsStr ? typeName : "${typeAsStr}.${typeName}";
 
-  String get genByAnnotation => annotation.objectValue.type.name;
+  String get genByAnnotation => annotation.objectValue.type.getDisplayString();
 }
 
 class GBeanConstructor extends _Tag {
@@ -277,7 +277,7 @@ class GBeanCreator {
   final String sourceUri;
   final String typeAsStr;
 
-  String get genByAnnotation => annotation.objectValue.type.name;
+  String get genByAnnotation => annotation.objectValue.type.getDisplayString();
 
   GBeanCreator(
     this.uri,

@@ -1,4 +1,3 @@
-
 const String codeTemplate = """
 {{#imports}}
 {{{importsPath}}}

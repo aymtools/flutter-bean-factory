@@ -124,8 +124,9 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
   static Pair<String, String> parseAAddImportList(
       DartType type, List<Pair<String, String>> routeImports) {
     String typeLibraryName = type.element.library.name;
-    if ("dart.core" == typeLibraryName || type.element.library.isDartCore)
+    if ("dart.core" == typeLibraryName || type.element.library.isDartCore) {
       return Pair("", "");
+    }
     return _parseImportList(
         type.element.librarySource.uri.toString(), routeImports);
   }
@@ -137,11 +138,11 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
 
   static Pair<String, String> _parseImportList(
       String uri, List<Pair<String, String>> routeImports) {
-    if ("" == uri || !uri.endsWith(".dart")) return new Pair(uri, uri);
+    if ("" == uri || !uri.endsWith(".dart")) return Pair(uri, uri);
     var impor = findFistWhere(routeImports, (imp) => uri == imp.key);
     if (null == impor) {
       String asStr = _formatAsStr(uri);
-      Pair<String, String> pair = new Pair(uri, asStr);
+      Pair<String, String> pair = Pair(uri, asStr);
       routeImports.add(pair);
       return pair;
     } else
@@ -155,12 +156,12 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
         .replaceAll("/", "_")
         .replaceFirst("package:", "")
         .replaceAllMapped(
-            new RegExp(r"_\w"), (match) => match.group(0).toUpperCase())
+            RegExp(r"_\w"), (match) => match.group(0).toUpperCase())
         .replaceAll("_", "");
     if (asStr.indexOf(".") > -1) {
       asStr = asStr
           .replaceAllMapped(
-              new RegExp(r"\.\w"), (match) => match.group(0).toUpperCase())
+              RegExp(r"\.\w"), (match) => match.group(0).toUpperCase())
           .replaceAll(".", "");
     }
     if (asStr.length > 1) {
