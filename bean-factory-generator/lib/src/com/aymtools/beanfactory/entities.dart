@@ -229,6 +229,7 @@ class GBeanMethod extends _Tag {
   String get methodNameKey => key.isEmpty ? methodName : key;
 
   DartType get methodResultType => methodElement.returnType;
+
   bool get isResultVoid => methodResultType.isVoid;
 //  bool get resultTypeName => methodResultType.name;
 }

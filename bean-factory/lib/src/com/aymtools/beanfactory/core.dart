@@ -348,8 +348,8 @@ class NoSuchFieldException implements Exception {
 class IllegalArgumentException implements Exception {
   final Type type;
   final String name;
-  final List<Pair<String,Type>> paramsTypes;
-  final List<Pair<String,Type>> valuesTypes;
+  final List<Pair<String, Type>> paramsTypes;
+  final List<Pair<String, Type>> valuesTypes;
   final message;
 
   IllegalArgumentException(
