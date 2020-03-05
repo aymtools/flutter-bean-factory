@@ -160,10 +160,13 @@ class GBean extends _Tag {
       this.typeName,
       this.sourceUri,
       this.typeAsStr,
-      this.constructors,
-      this.fields,
-      this.methods)
-      : super(classElement, annotation);
+      List<Pair<String, GBeanConstructor>> constructors,
+      List<Pair<String, GBeanField>> fields,
+      List<Pair<String, GBeanMethod>> methods)
+      : this.constructors = constructors ?? [],
+        this.fields = fields ?? [],
+        this.methods = methods ?? [],
+        super(classElement, annotation);
 
   String get clsType => "" == typeAsStr ? typeName : "${typeAsStr}${typeName}";
 
@@ -181,8 +184,9 @@ class GBeanConstructor extends _Tag {
   final List<Pair<String, GBeanParam>> params;
 
   GBeanConstructor(this.namedConstructorInUri, this.constructorElement,
-      this.annotation, this.params)
-      : super(constructorElement, annotation);
+      this.annotation, List<Pair<String, GBeanParam>> params)
+      : this.params = params ?? [],
+        super(constructorElement, annotation);
 
   String get namedConstructor => elementName;
 
@@ -221,8 +225,10 @@ class GBeanMethod extends _Tag {
 
   final List<Pair<String, GBeanParam>> params;
 
-  GBeanMethod(this.methodElement, this.annotation, this.params)
-      : super(methodElement, annotation);
+  GBeanMethod(this.methodElement, this.annotation,
+      List<Pair<String, GBeanParam>> params)
+      : this.params = params ?? [],
+        super(methodElement, annotation);
 
   String get methodName => elementName;
 

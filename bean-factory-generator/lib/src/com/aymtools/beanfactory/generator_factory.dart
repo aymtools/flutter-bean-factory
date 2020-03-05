@@ -42,6 +42,9 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
   @override
   generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) {
+
+    if(beanCreatorMap.isEmpty&&beanSysCreatorMap.isEmpty) return null;
+
     _beanFactoryDartFileUri = _genBeanFactoryDartFileUri(element);
     _beanFactorySysDartFileUri = _genBeanFactorySysDartFileUri(element);
 
@@ -60,36 +63,46 @@ class BeanFactoryGenerator extends GeneratorForAnnotation<Factory> {
               .toList()),
       'createBeanInstanceBySysCreator': beanInstanceGenerator
           .generateBeanSwitchInstance(beanSysCreatorMap.values.toList()),
-      'invokeMethods': beanMap.entries
-          .where((e) => e.value.methods.isNotEmpty)
-          .map((e) => e.value)
-          .map((e) =>
-              'case ${e.clsType_} : return ${sysAs}.invoke${e.clsType}Methods(bean, methodName,    params: params);')
-          .reduce((v, e) => v + e),
-      'getFields': beanMap.entries
-          .where((e) => e.value.fields.isNotEmpty)
-          .map((e) => e.value)
-          .map((e) =>
-              'case ${e.clsType_} : return ${sysAs}.get${e.clsType}Fields(bean, fieldName);')
-          .reduce((v, e) => v + e),
-      'setFields': beanMap.entries
-          .where((e) => e.value.fields.isNotEmpty)
-          .map((e) => e.value)
-          .map((e) =>
-              'case ${e.clsType_} :  ${sysAs}.set${e.clsType}Fields(bean, fieldName, value);break;')
-          .reduce((v, e) => v + e),
-      'getAllFields': beanMap.entries
-          .where((e) => e.value.fields.isNotEmpty)
-          .map((e) => e.value)
-          .map((e) =>
-              'case ${e.clsType_} : return ${sysAs}.get${e.clsType}AllFields(bean);')
-          .reduce((v, e) => v + e),
-      'setAllFields': beanMap.entries
-          .where((e) => e.value.fields.isNotEmpty)
-          .map((e) => e.value)
-          .map((e) =>
-              'case ${e.clsType_} : ${sysAs}.set${e.clsType}AllFields(bean,values);break;')
-          .reduce((v, e) => v + e),
+      'invokeMethods': beanMap.entries.isEmpty
+          ? ''
+          : beanMap.entries
+              .where((e) => e.value.methods.isNotEmpty)
+              .map((e) => e.value)
+              .map((e) =>
+                  'case ${e.clsType_} : return ${sysAs}.invoke${e.clsType}Methods(bean, methodName,    params: params);')
+              .reduce((v, e) => v + e),
+      'getFields': beanMap.entries.isEmpty
+          ? ''
+          : beanMap.entries
+              .where((e) => e.value.fields.isNotEmpty)
+              .map((e) => e.value)
+              .map((e) =>
+                  'case ${e.clsType_} : return ${sysAs}.get${e.clsType}Fields(bean, fieldName);')
+              .reduce((v, e) => v + e),
+      'setFields': beanMap.entries.isEmpty
+          ? ''
+          : beanMap.entries
+              .where((e) => e.value.fields.isNotEmpty)
+              .map((e) => e.value)
+              .map((e) =>
+                  'case ${e.clsType_} :  ${sysAs}.set${e.clsType}Fields(bean, fieldName, value);break;')
+              .reduce((v, e) => v + e),
+      'getAllFields': beanMap.entries.isEmpty
+          ? ''
+          : beanMap.entries
+              .where((e) => e.value.fields.isNotEmpty)
+              .map((e) => e.value)
+              .map((e) =>
+                  'case ${e.clsType_} : return ${sysAs}.get${e.clsType}AllFields(bean);')
+              .reduce((v, e) => v + e),
+      'setAllFields': beanMap.entries.isEmpty
+          ? ''
+          : beanMap.entries
+              .where((e) => e.value.fields.isNotEmpty)
+              .map((e) => e.value)
+              .map((e) =>
+                  'case ${e.clsType_} : ${sysAs}.set${e.clsType}AllFields(bean,values);break;')
+              .reduce((v, e) => v + e),
     });
 
     String filePath = buildStep.inputId.path;

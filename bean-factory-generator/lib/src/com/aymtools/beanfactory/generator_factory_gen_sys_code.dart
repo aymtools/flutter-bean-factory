@@ -21,14 +21,18 @@ class GenSysBeanCreatorGenerator extends GeneratorForAnnotation<Factory> {
     filePath = "$filePath/beanfactory.sys.aymtools.dart";
     wUri = wUri.substring(0, wUri.lastIndexOf("/") + 1) +
         'beanfactory.sys.aymtools.dart';
-    _genSysGenerator(wUri).then((value) {
-      var sysBFFile = File(filePath);
-      if (sysBFFile.existsSync()) {
-        sysBFFile.deleteSync();
-      }
-      sysBFFile.writeAsString(
-          BeanFactoryGenerator.writeDartFileFormatter.format(value));
-    });
+    if (BeanFactoryGenerator.beanMap.isNotEmpty ||
+        BeanFactoryGenerator.beanCreatorMap.isNotEmpty) {
+      _genSysGenerator(wUri).then((value) {
+        var sysBFFile = File(filePath);
+        if (sysBFFile.existsSync()) {
+          sysBFFile.deleteSync();
+        }
+        sysBFFile.writeAsString(
+            BeanFactoryGenerator.writeDartFileFormatter.format(value));
+      });
+    }
+
     return null;
   }
 
