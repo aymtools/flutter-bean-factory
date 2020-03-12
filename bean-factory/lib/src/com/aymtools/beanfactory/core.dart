@@ -1,24 +1,36 @@
 /// 定义Bean生成器注解 dart特殊机制 自动化的入口
 class Factory {
-  ///表示存在在其他类库中的 Bean 路径 可以自动分模块引用 当当前模块优先级 最高  被指明的类必须使用 FactoryLibExport注解
+  ///表示存在在其他类库中的 Bean 路径 可以自动分模块引用 当前模块优先级 最高  被指明的类必须使用 FactoryLibExport注解
+  @Deprecated('use importLibsName')
   final List<Type> otherFactory;
 
-  ///表示存在在其他类库中的 Bean 路径 可以自动分模块引用 当当前模块优先级 最高
+  ///表示主动导入到生成文件的import上 无意义，默认会自动寻找需要导入的文件
+  @Deprecated('not uesd')
   final List<String> otherImports;
 
-  ///自定义key生成器
-//  final List<KeyGen> otherKeyGen;
+  final List<String> importLibsName;
+
+  final bool isGenFactory;
+  final bool isGenLibExport;
 
   const Factory({
     this.otherFactory = const [],
-    this.otherImports = const [],
-//    this.otherKeyGen = const [],
-  });
+    List<String> otherImports = const [],
+    this.isGenFactory = true,
+    this.isGenLibExport = false,
+    List<String> importLibsName,
+  })  : this.importLibsName = importLibsName ?? const [],
+        this.otherImports = const [];
 }
 
 /// 定义类库相关的Bean类自动导出 就是写库 让库中的 Bean BeanCreator 自动生成lib文件
-class BeanFactoryLibExport {
-  const BeanFactoryLibExport();
+@Deprecated('use Factory')
+class BeanFactoryLibExport extends Factory {
+  const BeanFactoryLibExport({List<String> importLibsName})
+      : super(
+            isGenFactory: false,
+            isGenLibExport: true,
+            importLibsName: importLibsName);
 }
 
 abstract class _BeanBase {
@@ -26,23 +38,27 @@ abstract class _BeanBase {
   final String tag;
   final int ext;
   final bool flag;
+  final Type extType;
   final String tag1;
   final int ext1;
   final bool flag1;
 
   final List<String> tagList;
   final List<int> extList;
+  final List<Type> extTypeList;
 
   const _BeanBase(
       {this.key,
       this.tag,
       this.ext,
       this.flag,
+      this.extType,
       this.tag1,
       this.ext1,
       this.flag1,
       this.tagList,
-      this.extList});
+      this.extList,
+      this.extTypeList});
 }
 
 /// 定义Bean的注解
@@ -254,8 +270,8 @@ class KeyGenByClassName implements KeyGen {
   @override
   String gen(String key, String tag, int ext, String className, String libUri) {
     String url = libUri;
-    if (url.endsWith(".dart")) url = url.substring(0, libUri.length - 6);
-    url = url.replaceFirst("package:", "").replaceAll(".", "/");
+    if (url.endsWith(".dart")) url = url.substring(0, libUri.length - 5);
+    url = url.replaceFirst("package:", "").replaceAll(".", "_");
     String simpleName =
         "/${(className?.isNotEmpty ?? false) ? '${className[0].toLowerCase()}${className.substring(1)}' : className}";
     return "/$url$simpleName";
@@ -283,6 +299,26 @@ class KeyGenBySequence implements KeyGen {
           String key, String tag, int ext, String className, String libUri) =>
       "/bean/bean${++next}";
 }
+
+///
+//class KeyGenByAddPrefix extends KeyGenByUri {
+//  final String scheme;
+//  final String authority;
+//
+//  const KeyGenByAddPrefix(String scheme, String authority)
+//      : this.scheme = scheme ?? '',
+//        this.authority = authority ?? '';
+//
+//  @override
+//  String gen(String key, String tag, int ext, String className, String libUri) {
+//    Uri uri = Uri.parse(key);
+//    if (scheme.isNotEmpty && !uri.hasScheme) {
+//      uri.replace(scheme: scheme);
+//      uri.replace(host: scheme);
+//    }
+//    return super.gen(key, tag, ext, className, libUri);
+//  }
+//}
 
 E findFistWhere<E>(List<E> list, bool test(E element), {E orElse = null}) {
   for (E element in list) {

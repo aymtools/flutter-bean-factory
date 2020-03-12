@@ -1,6 +1,8 @@
 import 'package:bean_factory/bean_factory.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:bean_factory_generator/bean_factory_generator.dart';
+import 'package:bean_factory_generator/src/com/aymtools/beanfactory/constants.dart';
 import 'package:source_gen/source_gen.dart';
 
 class _Tag {
@@ -100,6 +102,62 @@ class _Tag {
               .listValue
               .map((e) => e.toIntValue())
               .toList();
+  GType _extType;
+
+  GType get extType {
+    if (_extType != null) return _extType;
+    if (annotation.isNull ||
+        annotation.peek('extType').isNull ||
+        !annotation.peek('extType').isType) {
+      return null;
+    }
+    DartType type = annotation.peek('extType').typeValue;
+    MapEntry<String, String> imp = parseAddImport(type);
+    _extType = GType(type.element.displayName, imp.key, imp.value, type);
+    return _extType;
+  }
+
+  List<GType> _extTypeList;
+
+  List<GType> get extTypeList {
+    if (_extType != null) return _extTypeList;
+    if (annotation.isNull ||
+        annotation.peek('extTypeList').isNull ||
+        !annotation.peek('extTypeList').isList) {
+      return [];
+    }
+    _extTypeList = annotation
+        .peek('extTypeList')
+        .listValue
+        .map((e) => e.toTypeValue())
+        .map((e) {
+      MapEntry<String, String> imp = parseAddImport(e);
+      return GType(e.element.displayName, imp.key, imp.value, e);
+    }).toList();
+
+    return _extTypeList;
+  }
+}
+
+class GType {
+  final String typeName;
+  final String typeLibSourceUri;
+  final String typeLibSourceAsStr;
+  final DartType dartType;
+
+  GType(this.typeName, this.typeLibSourceUri, this.typeLibSourceAsStr,
+      this.dartType);
+
+  bool get isDartCoreBool => dartType.isDartCoreBool;
+
+  bool get isDartCoreDouble => dartType.isDartCoreDouble;
+
+  bool get isDartCoreInt => dartType.isDartCoreInt;
+
+  bool get isTypeDartCoreBase =>
+      isDartCoreBool || isDartCoreDouble || isDartCoreInt;
+
+  bool get isTypeDartCoreString => dartType.isDartCoreString;
 }
 
 class GBeanParam extends _Tag {
@@ -107,35 +165,35 @@ class GBeanParam extends _Tag {
 
   final bool isNamed;
 
-  final String typeName;
-  final String typeAsStr;
-  final String typeSourceUri;
-
-  final DartType type;
-  final Type runtimeType;
+  final GType type;
 
   GBeanParam(
-      this.parameterElement,
-      ConstantReader annotation,
-      this.isNamed,
-      this.typeSourceUri,
-      this.typeAsStr,
-      this.typeName,
-      this.type,
-      this.runtimeType)
-      : super(parameterElement, annotation);
+    this.parameterElement,
+    ConstantReader annotation,
+    this.isNamed,
+    String typeLibSourceUri,
+    String typeLibSourceAsStr,
+    String typeName,
+    DartType dartType,
+  )   : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
+        super(parameterElement, annotation);
 
   String get paramName => elementName;
 
   bool get isTypeDartCoreBase =>
-      type.isDartCoreBool || type.isDartCoreDouble || type.isDartCoreInt;
+      type.dartType.isDartCoreBool ||
+      type.dartType.isDartCoreDouble ||
+      type.dartType.isDartCoreInt;
 
-  bool get isTypeDartCoreString => type.isDartCoreString;
+  bool get isTypeDartCoreString => type.dartType.isDartCoreString;
 
-  bool get isTypeDartCoreMap => "" == typeAsStr && "Map" == typeName;
+  bool get isTypeDartCoreMap =>
+      "" == type.typeLibSourceAsStr && "Map" == type.typeName;
 
-  String get paramType =>
-      "" == typeAsStr ? typeName : "${typeAsStr}.${typeName}";
+  String get paramType => "" == type.typeLibSourceAsStr
+      ? type.typeName
+      : "${type.typeLibSourceAsStr}.${type.typeName}";
 
   String get keyInMaps => "" == key ? paramName : key;
 }
@@ -145,9 +203,7 @@ class GBean extends _Tag {
 
   final ClassElement classElement;
 
-  final String typeName;
-  final String sourceUri;
-  final String typeAsStr;
+  final GType type;
 
   final List<Pair<String, GBeanConstructor>> constructors;
   final List<Pair<String, GBeanMethod>> methods;
@@ -157,23 +213,33 @@ class GBean extends _Tag {
       this.uri,
       this.classElement,
       ConstantReader annotation,
-      this.typeName,
-      this.sourceUri,
-      this.typeAsStr,
+      String typeName,
+      String typeLibSourceUri,
+      String typeLibSourceAsStr,
+      DartType dartType,
       List<Pair<String, GBeanConstructor>> constructors,
       List<Pair<String, GBeanField>> fields,
       List<Pair<String, GBeanMethod>> methods)
-      : this.constructors = constructors ?? [],
+      : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
+        this.constructors = constructors ?? [],
         this.fields = fields ?? [],
         this.methods = methods ?? [],
         super(classElement, annotation);
 
-  String get clsType => "" == typeAsStr ? typeName : "${typeAsStr}${typeName}";
+  String get clsType => "" == type.typeLibSourceAsStr
+      ? type.typeName
+      : "${type.typeLibSourceAsStr}${type.typeName}";
 
-  String get clsType_ =>
-      "" == typeAsStr ? typeName : "${typeAsStr}.${typeName}";
+  String get clsType_ => "" == type.typeLibSourceAsStr
+      ? type.typeName
+      : "${type.typeLibSourceAsStr}.${type.typeName}";
 
   String get genByAnnotation => annotation.objectValue.type.getDisplayString();
+
+  String get sourceUri => type.typeLibSourceUri;
+
+  String get typeAsStr => type.typeLibSourceAsStr;
 }
 
 class GBeanConstructor extends _Tag {
@@ -258,16 +324,18 @@ class GBeanField extends _Tag {
   final FieldElement fieldElement;
   final ConstantReader annotation;
 
-  final String typeName;
-  final String typeAsStr;
-  final String typeSourceUri;
+  final GType type;
 
-  final DartType type;
-  final Type runtimeType;
-
-  GBeanField(this.fieldElement, this.annotation, this.typeSourceUri,
-      this.typeAsStr, this.typeName, this.type, this.runtimeType)
-      : super(fieldElement, annotation);
+  GBeanField(
+    this.fieldElement,
+    this.annotation,
+    String typeLibSourceUri,
+    String typeLibSourceAsStr,
+    String typeName,
+    DartType dartType,
+  )   : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
+        super(fieldElement, annotation);
 
   String get fieldName => elementName;
 
@@ -280,9 +348,7 @@ class GBeanCreator {
   final ClassElement element;
   final ConstantReader annotation;
 
-  final String typeName;
-  final String sourceUri;
-  final String typeAsStr;
+  final GType type;
 
   String get genByAnnotation => annotation.objectValue.type.getDisplayString();
 
@@ -290,8 +356,18 @@ class GBeanCreator {
     this.uri,
     this.element,
     this.annotation,
-    this.typeName,
-    this.sourceUri,
-    this.typeAsStr,
-  );
+    String typeName,
+    String typeLibSourceUri,
+    String typeLibSourceAsStr,
+    DartType dartType,
+  ) : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType);
+
+  String get classNameCode => '' == type.typeLibSourceAsStr
+      ? type.typeName
+      : "${type.typeLibSourceAsStr}${type.typeName}";
+
+  String get instantiateCode => '' == type.typeLibSourceAsStr
+      ? type.typeName
+      : "${type.typeLibSourceAsStr}.${type.typeName}";
 }

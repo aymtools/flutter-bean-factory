@@ -40,7 +40,7 @@ class BeanFactory {
   }
 
   dynamic getSingleBeanInstance(String uri) {
-    uri = getPageUri(Uri.parse(uri));
+    uri = getBeanUri(Uri.parse(uri));
     if (_singleInstanceBean.containsKey(uri)) return _singleInstanceBean[uri];
     dynamic bean = getBeanInstance(uri);
     _singleInstanceBean[uri] = bean;
@@ -122,7 +122,7 @@ class BeanFactory {
     }
   }
   
-  String getPageUri(Uri u) {
+  String getBeanUri(Uri u) {
     String uri;
     List<String> pathSegments = u.pathSegments;
     String namedConstructorInUri = "";
@@ -191,12 +191,20 @@ class BeanFactory {
   
   dynamic _createBeanInstanceByCustomCreator(String uri, String namedConstructorInUri,
       Map<String, dynamic> mapParam, dynamic objParam) {
-     {{{createBeanInstanceByCustomCreator}}}
+     switch (uri) {
+        {{{createBeanInstanceByCustomCreator}}}
+        default: 
+        return null;
+     }
   }
   
   dynamic _createBeanInstanceBySysCreator(String uri, String namedConstructorInUri,
       Map<String, dynamic> mapParam, dynamic objParam) {
-     {{{createBeanInstanceBySysCreator}}}
+     switch (uri) {
+        {{{createBeanInstanceBySysCreator}}}
+        default: 
+        return null;
+     }
   }
   
   dynamic invokeMethod(dynamic bean, String methodName,

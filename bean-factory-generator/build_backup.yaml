@@ -1,0 +1,115 @@
+# Read about `build.yaml` at https://pub.flutter-io.cn/packages/build_config
+targets:
+  $default:
+    builders:
+      annotation_route|bean_factory_init_builder:
+        enabled: true
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+      annotation_route|bean_factory_scan_bean_builder:
+        enabled: true
+#        options: { 'write': true }
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+      annotation_route|bean_factory_scan_lib_bean_builder:
+        enabled: true
+#        options: { 'write': true }
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+      annotation_route|bean_factory_scan_creator_builder:
+        enabled: true
+#        options: { 'write': true }
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+      annotation_route|bean_factory_export_builder:
+        enabled: true
+#        options: { 'write': true }
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+      annotation_route|bean_factory_gen_sys_creator_builder:
+        enabled: true
+        options: { 'write': true }
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+      annotation_route|bean_factory_builder:
+        enabled: true
+        options: { 'write': true }
+        generate_for:
+          exclude: ['**.bf.aymtools.dart']
+builders:
+  bean_factory_init_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['initBuilder']
+    build_extensions: { '.dart': ['.init.bf.aymtools.dart'] }
+    #    is_optional: true
+    runs_before: ['annotation_route|bean_factory_scan_bean_builder','annotation_route|bean_factory_scan_lib_bean_builder','annotation_route|bean_factory_scan_creator_builder','annotation_route|bean_factory_scan_lib_creator_builder','annotation_route|bean_factory_export_builder','annotation_route|bean_factory_gen_sys_creator_builder','annotation_route|bean_factory_builder']
+    auto_apply: root_package
+    build_to: cache
+  #  class_template_builder:
+  #    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+  #    builder_factories: ['classTemplateBuilder']
+  #    build_extensions: { '.dart': ['.template.aymtools.dart'] }
+  #    auto_apply: root_package
+  #    build_to: source
+  bean_factory_scan_bean_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['scanBeanBuilder']
+    build_extensions: { '.dart': ['.scan.bf.aymtools.dart'] }
+    #    is_optional: true
+    runs_before: ['annotation_route|bean_factory_scan_lib_bean_builder','annotation_route|bean_factory_export_builder','annotation_route|bean_factory_gen_sys_creator_builder','annotation_route|bean_factory_builder']
+    #    applies_builders: ['bean_factory_init_builder']
+    auto_apply: root_package
+    build_to: cache
+  bean_factory_scan_lib_bean_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['scanLibBeanBuilder']
+    build_extensions: { '.dart': ['.scan.lib.bf.aymtools.dart'] }
+    #    is_optional: true
+    runs_before: ['annotation_route|bean_factory_export_builder','annotation_route|bean_factory_gen_sys_creator_builder','annotation_route|bean_factory_builder']
+    #    applies_builders: ['bean_factory_scan_bean_builder']
+    auto_apply: root_package
+    build_to: cache
+  bean_factory_scan_creator_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['scanCreatorBuilder']
+    build_extensions: { '.dart': ['.scan.creator.bf.aymtools.dart'] }
+    #    is_optional: true
+    runs_before: ['annotation_route|bean_factory_scan_lib_creator_builder','annotation_route|bean_factory_export_builder','annotation_route|bean_factory_gen_sys_creator_builder','annotation_route|bean_factory_builder']
+    #    applies_builders: ['bean_factory_scan_lib_bean_builder']
+    auto_apply: root_package
+    build_to: cache
+  bean_factory_scan_lib_creator_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['scanLibCreatorBuilder']
+    build_extensions: { '.dart': ['.scan.lib.creator.bf.aymtools.dart'] }
+    #    is_optional: true
+    runs_before: ['annotation_route|bean_factory_export_builder','annotation_route|bean_factory_gen_sys_creator_builder','annotation_route|bean_factory_builder']
+    #    applies_builders: ['bean_factory_scan_creator_builder']
+    auto_apply: root_package
+    build_to: cache
+  bean_factory_export_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['beanFactoryExportBuilder']
+    build_extensions: { '.dart': ['.e.bf.aymtools.dart'] }
+    #    is_optional: true
+    #    runs_before: ['bean_factory_gen_sys_creator_builder']
+    #    applies_builders: ['bean_factory_scan_lib_creator_builder']
+    auto_apply: root_package
+    build_to: cache
+  bean_factory_gen_sys_creator_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['genSysCreatorBuilder']
+    build_extensions: { '.dart': ['.sys.bf.aymtools.dart'] }
+    #    is_optional: true
+    runs_before: ['bean_factory_builder']
+    #    applies_builders: ['bean_factory_export_builder']
+    auto_apply: root_package
+    build_to: cache
+  bean_factory_builder:
+    import: 'package:bean_factory_generator/src/com/aymtools/beanfactory/builder.dart'
+    builder_factories: ['beanFactoryBuilder']
+    build_extensions: { '.dart': ['.bf.aymtools.dart'] }
+    #    is_optional: true
+    #    applies_builders: ['bean_factory_gen_sys_creator_builder']
+    auto_apply: root_package
+    build_to: cache
