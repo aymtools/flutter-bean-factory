@@ -8,7 +8,7 @@ TypeChecker _beanChecker = TypeChecker.fromRuntime(Bean);
 TypeChecker _beanCreatorChecker = TypeChecker.fromRuntime(BeanCreator);
 
 scan(LibraryReader library) {
-  print('scan lib ${library.element.librarySource.uri}');
+//  print('scan lib ${library.element.librarySource.uri}');
   library
       .annotatedWith(_beanChecker)
       .forEach((element) => _scanBean(element.element, element.annotation));

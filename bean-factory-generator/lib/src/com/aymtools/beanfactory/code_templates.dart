@@ -207,6 +207,11 @@ class BeanFactory {
      }
   }
   
+  static dynamic invokeMethodS(dynamic bean, String methodName,
+          {Map<String, dynamic> params}) =>
+      instance.invokeMethod(bean, methodName, params:params);
+  
+  
   dynamic invokeMethod(dynamic bean, String methodName,
       {Map<String, dynamic> params}) {
     switch (bean.runtimeType) {
@@ -214,6 +219,8 @@ class BeanFactory {
     }
     throw NoSuchMethodException(bean.runtimeType , methodName);
   }
+  
+  static dynamic getFieldValue(dynamic bean, String fieldName)=>instance.getField(bean, fieldName);
 
   dynamic getField(dynamic bean, String fieldName) {
     switch (bean.runtimeType) {
@@ -222,6 +229,8 @@ class BeanFactory {
     throw NoSuchFieldException(bean.runtimeType , fieldName);
   }
 
+  static void setFieldValue(dynamic bean, String fieldName, dynamic value)=>instance.setField(bean, fieldName, value);
+
   void setField(dynamic bean, String fieldName, dynamic value) {
     switch (bean.runtimeType) {
         {{{setFields}}}
@@ -229,11 +238,16 @@ class BeanFactory {
     throw NoSuchFieldException(bean.runtimeType , fieldName);
   }
 
-  dynamic getFields(dynamic bean) {
+  static Map<String, dynamic> getAllFieldValue(dynamic bean)=>instance.getFields(bean);
+
+  Map<String, dynamic> getFields(dynamic bean) {
     switch (bean.runtimeType) {
         {{{getAllFields}}}
     }
+    return {};
   }
+
+  static void setFieldValueByMap(dynamic bean, Map<String, dynamic> values)=>instance.setFields(bean, values);
 
   void setFields(dynamic bean, Map<String, dynamic> values) {
     switch (bean.runtimeType) {
