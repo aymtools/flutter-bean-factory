@@ -143,7 +143,7 @@ class Init extends Builder {
             : annotation.peek('isGenLibExport').boolValue;
         List<String> importLibsName =
             annotation.peek('importLibsName').isNull ||
-                    !annotation.peek('isGenFactory').isList
+                    !annotation.peek('importLibsName').isList
                 ? []
                 : annotation
                     .peek('importLibsName')
@@ -204,7 +204,7 @@ class Gen extends Builder {
 //    print("Gen 1");
     if (config != null) {
 //      print("Gen 2");
-      await _importLib(buildStep);
+      await _importLibs(buildStep);
       if (config.isGenLibExport) {
 //        print("Gen 3");
         await _exportLib(buildStep);
@@ -221,18 +221,19 @@ class Gen extends Builder {
     }
   }
 
-  void _importLib(BuildStep buildStep) async {
-    await config.importLibsName.forEach((libPackageName) async {
+  void _importLibs(BuildStep buildStep) async {
+    List<String> otherLibs = config.importLibsName;
+    for (String libPackageName in otherLibs) {
       try {
         AssetId assetId = AssetId(libPackageName, "lib/$libPackageName.dart");
-//        buildStep.canRead(assetId);
         var lib = await buildStep.resolver.libraryFor(assetId);
         await lib.exportedLibraries
+            .where((element) => !element.isInSdk)
             .forEach((element) => scan(LibraryReader(element)));
       } catch (e) {
-        print("Cann't load ${libPackageName} library!!");
+        print("Cann't load ${libPackageName} library!! \n $e");
       }
-    });
+    }
   }
 
   void _exportLib(BuildStep buildStep) async {

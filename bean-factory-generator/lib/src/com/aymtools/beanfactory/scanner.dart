@@ -8,6 +8,7 @@ TypeChecker _beanChecker = TypeChecker.fromRuntime(Bean);
 TypeChecker _beanCreatorChecker = TypeChecker.fromRuntime(BeanCreator);
 
 scan(LibraryReader library) {
+  print('scan lib ${library.element.librarySource.uri}');
   library
       .annotatedWith(_beanChecker)
       .forEach((element) => _scanBean(element.element, element.annotation));
@@ -270,7 +271,7 @@ _scanBeanCreator(Element element, ConstantReader annotation) {
       imp.value,
       (element as ClassElement).thisType);
 
-  if (!key.endsWith(".sys.bf.aymtools.dart")) {
+  if (!key.endsWith(".sys.bf.aymtools.dart")&&!key.endsWith("beanfactory.sys.aymtools.dart")) {
     if (!beanCreatorMap.containsKey(uriKey)) {
       beanCreatorMap[key] = pageGenerator;
     }
