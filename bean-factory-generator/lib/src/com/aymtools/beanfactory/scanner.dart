@@ -51,7 +51,10 @@ void _scanBean(Element element, ConstantReader annotation) {
   if (!(annotation.peek('keyGen').isNull ||
       annotation.peek('keyGen').objectValue.isNull ||
       '' == annotation.peek('keyGen').objectValue.type.getDisplayString())) {
-    keyGens[annotation.peek('keyGen').objectValue.type.getDisplayString()];
+    print(
+        'keyGen:${annotation.peek('keyGen').objectValue.type.getDisplayString()}');
+    keyGen =
+        keyGens[annotation.peek('keyGen').objectValue.type.getDisplayString()];
   }
   if (keyGen == null) {
     keyGen = KeyGenByClassName();
