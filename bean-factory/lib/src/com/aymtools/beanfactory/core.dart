@@ -13,13 +13,21 @@ class Factory {
   final bool isGenFactory;
   final bool isGenLibExport;
 
+  static const int GEN_GROUP_BY_NONE = 0;
+  static const int GEN_GROUP_BY_SCHEME = 1;
+
+  ///自动根据不同策略生成调用器的顺序，有可能增加调用器的执行效率 暂未实现
+  final int genGroupBy;
+
   const Factory({
     this.otherFactory = const [],
     List<String> otherImports = const [],
     this.isGenFactory = true,
     this.isGenLibExport = false,
     List<String> importLibsName,
-  })  : this.importLibsName = importLibsName ?? const [],
+    int genGroupBy = GEN_GROUP_BY_NONE,
+  })  : this.genGroupBy = 0,
+        this.importLibsName = importLibsName ?? const [],
         this.otherImports = const [];
 }
 
@@ -150,6 +158,30 @@ class BeanConstructorNot {
   const BeanConstructorNot();
 }
 
+///一般用来测试接受到的参数 构造函数 必须为两个参数 的第一个参数为dynamic类型(调用者传入参数) 第二个为Map<String,dynamic>(uri中参数) 类型 若不符要求则不识别当前的构造函数
+class BeanConstructorFor2Params extends BeanConstructor {
+  const BeanConstructorFor2Params({
+    String namedConstructor = "",
+    String tag = "",
+    int ext = -1,
+    bool flag = false,
+    String tag1 = "",
+    int ext1 = -1,
+    bool flag1 = false,
+    List<String> tagList = const [],
+    List<int> extList = const [],
+  }) : super(
+            namedConstructor: namedConstructor,
+            tag: tag,
+            ext: ext,
+            flag: flag,
+            tag1: tag1,
+            ext1: ext1,
+            flag1: flag1,
+            tagList: tagList,
+            extList: extList);
+}
+
 /// Bean构造函数或factory或方法体参数指定在map参数中的名字
 class BeanParam extends _BeanBase {
   const BeanParam({
@@ -271,10 +303,23 @@ class KeyGenByClassName implements KeyGen {
   String gen(String key, String tag, int ext, String className, String libUri) {
     String url = libUri;
     if (url.endsWith(".dart")) url = url.substring(0, libUri.length - 5);
-    url = url.replaceFirst("package:", "").replaceAll(".", "_");
+    if (url.startsWith('package:')) {
+      url = url.replaceFirst('package:', '');
+      if (url.indexOf('/') > 0) {
+        String scheme = url.substring(0, url.indexOf('/'));
+        url = url.substring(url.indexOf('/') + 1);
+        url = scheme + '://' + url;
+      } else {
+        url = url.replaceAll(".", "_");
+        url = '/' + url;
+      }
+    } else {
+      url = url.replaceAll(".", "_");
+      url = '/' + url;
+    }
     String simpleName =
-        "/${(className?.isNotEmpty ?? false) ? '${className[0].toLowerCase()}${className.substring(1)}' : className}";
-    return "/$url$simpleName";
+        "${(className?.isNotEmpty ?? false) ? '${className[0].toLowerCase()}${className.substring(1)}' : className}";
+    return "$url/$simpleName";
   }
 }
 
@@ -349,8 +394,22 @@ class BoxThree<A, B, C> {
 
 ///自定义Bean的生成器 不在提供Bean的配置信息 自己完全自定义 一个uri对应一个生成策略
 abstract class BeanCustomCreatorBase<Bean> {
-  Bean create(String namedConstructorInUri, Map<String, dynamic> mapParams,
-      dynamic objParam);
+  Bean create(String namedConstructorInUri, dynamic param,
+      Map<String, String> uriParams, bool canThrowException);
+}
+
+class BeanNotFoundException implements Exception {
+  final String uri;
+  final message;
+
+  BeanNotFoundException(this.uri, {this.message});
+
+  String toString() {
+    String def =
+        "BeanNotFoundException:\n For ${uri} cann not found Bean config!";
+    if (message == null) return def;
+    return "$def: $message";
+  }
 }
 
 class NoSuchMethodException implements Exception {
@@ -361,7 +420,7 @@ class NoSuchMethodException implements Exception {
   NoSuchMethodException(this.type, this.methodName, {this.message});
 
   String toString() {
-    String def = "NoSuchMethodException:\n${type}\n$methodName not found !";
+    String def = "NoSuchMethodException:\n${type} : $methodName not found !";
     if (message == null) return def;
     return "$def: $message";
   }
@@ -375,7 +434,7 @@ class NoSuchFieldException implements Exception {
   NoSuchFieldException(this.type, this.fieldName, {this.message});
 
   String toString() {
-    String def = "NoSuchFieldException:\n${type}\n$fieldName not found !";
+    String def = "NoSuchFieldException:\n${type} : $fieldName not found !";
     if (message == null) return def;
     return "$def: $message";
   }
@@ -393,7 +452,8 @@ class IllegalArgumentException implements Exception {
       {this.message});
 
   String toString() {
-    String def = "IllegalArgumentException:\n${type}\n$name illegal argument !";
+    String def =
+        "IllegalArgumentException:\n${type} : $name illegal argument ! \n need params : ${paramsTypes} \n values params ${valuesTypes}";
     if (message == null) return def;
     return "$def: $message";
   }

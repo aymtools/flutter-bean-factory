@@ -273,18 +273,20 @@ class BeanFactoryGenerator {
   static String getBeanFactorySysDartLibUri() => beanFactorySysDartLibUri;
 
   static Map<String, String> get imports => bf.imports;
-}
-
-class BeanFactory {
-  static Map<String, GBean> get beanMap => bf.beanMap;
-
-  static Map<String, GBeanCreator> get beanCreatorMap => bf.beanCreatorMap;
-
-  static String get beanFactoryDartLibUri => bf.beanFactoryCodeUri;
-
-  static String get beanFactorySysDartLibUri => bf.beanFactoryInvokerCodeUri;
-
-  static Map<String, String> get imports => bf.imports;
 
   static bool get isGenerated => bf.config != null && Gen.isGenerated;
 }
+
+//class BeanFactory {
+//  static Map<String, GBean> get beanMap => bf.beanMap;
+//
+//  static Map<String, GBeanCreator> get beanCreatorMap => bf.beanCreatorMap;
+//
+//  static String get beanFactoryDartLibUri => bf.beanFactoryCodeUri;
+//
+//  static String get beanFactorySysDartLibUri => bf.beanFactoryInvokerCodeUri;
+//
+//  static Map<String, String> get imports => bf.imports;
+//
+//  static bool get isGenerated => bf.config != null && Gen.isGenerated;
+//}

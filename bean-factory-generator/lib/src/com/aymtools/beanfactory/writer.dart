@@ -3,6 +3,7 @@ import 'package:bean_factory/bean_factory.dart';
 import 'package:bean_factory_generator/src/com/aymtools/beanfactory/code_templates.dart';
 import 'package:bean_factory_generator/src/com/aymtools/beanfactory/constants.dart';
 import 'package:bean_factory_generator/src/com/aymtools/beanfactory/entities.dart';
+import 'package:bean_factory_generator/src/com/aymtools/beanfactory/scanner.dart';
 import 'package:mustache4dart/mustache4dart.dart';
 import 'dart:math' as Math;
 
@@ -28,14 +29,14 @@ genBeanFactoryCode() => render(codeTemplate, <String, dynamic>{
           ? ''
           : beanCreatorMap.entries
               .map((e) =>
-                  '  case "${e.value.uri}" : return ${e.value.instantiateCode}().create(namedConstructorInUri,mapParam,objParam);')
+                  '  case "${e.value.uri}" : return ${e.value.instantiateCode}().create(namedConstructorInUri,param,uriParams, canThrowException);')
               .fold('', (p, e) => p + e),
       'createBeanInstanceBySysCreator': beanMap.entries.isEmpty ||
               beanSysCreatorMap.entries.isEmpty
           ? ''
           : beanSysCreatorMap.entries
               .map((e) =>
-                  '  case "${e.value.uri}" : return ${e.value.instantiateCode}().create(namedConstructorInUri,mapParam,objParam);')
+                  '  case "${e.value.uri}" : return ${e.value.instantiateCode}().create(namedConstructorInUri,param,uriParams, canThrowException);')
               .fold('', (p, e) => p + e),
       'invokeMethods': beanMap.entries.isEmpty
           ? ''
@@ -43,7 +44,7 @@ genBeanFactoryCode() => render(codeTemplate, <String, dynamic>{
               .map((e) => e.value)
               .where((e) => e.methods.isNotEmpty)
               .map((e) =>
-                  ' case ${e.clsType_} : return ${_invokerP}invoke${e.clsType}Methods(bean, methodName,    params: params);')
+                  ' case ${e.clsType_} : return ${_invokerP}invoke${e.clsType}Methods(bean, methodName, params, canThrowException);')
               .fold('', (p, e) => p + e),
       'getFields': beanMap.entries.isEmpty
           ? ''
@@ -51,7 +52,7 @@ genBeanFactoryCode() => render(codeTemplate, <String, dynamic>{
               .map((e) => e.value)
               .where((e) => e.fields.isNotEmpty)
               .map((e) =>
-                  ' case ${e.clsType_} : return ${_invokerP}get${e.clsType}Fields(bean, fieldName);')
+                  ' case ${e.clsType_} : return ${_invokerP}get${e.clsType}Fields(bean, fieldName,canThrowException);')
               .fold('', (p, e) => p + e),
       'setFields': beanMap.entries.isEmpty
           ? ''
@@ -59,7 +60,7 @@ genBeanFactoryCode() => render(codeTemplate, <String, dynamic>{
               .map((e) => e.value)
               .where((e) => e.fields.isNotEmpty)
               .map((e) =>
-                  ' case ${e.clsType_} :  ${_invokerP}set${e.clsType}Fields(bean, fieldName, value);break;')
+                  ' case ${e.clsType_} :  ${_invokerP}set${e.clsType}Fields(bean, fieldName, value,canThrowException);break;')
               .fold('', (p, e) => p + e),
       'getAllFields': beanMap.entries.isEmpty
           ? ''
@@ -67,7 +68,7 @@ genBeanFactoryCode() => render(codeTemplate, <String, dynamic>{
               .map((e) => e.value)
               .where((e) => e.fields.isNotEmpty)
               .map((e) =>
-                  ' case ${e.clsType_} : return ${_invokerP}get${e.clsType}AllFields(bean);')
+                  ' case ${e.clsType_} : return ${_invokerP}get${e.clsType}AllFields(bean,canThrowException);')
               .fold('', (p, e) => p + e),
       'setAllFields': beanMap.entries.isEmpty
           ? ''
@@ -75,8 +76,14 @@ genBeanFactoryCode() => render(codeTemplate, <String, dynamic>{
               .map((e) => e.value)
               .where((e) => e.fields.isNotEmpty)
               .map((e) =>
-                  ' case ${e.clsType_} : ${_invokerP}set${e.clsType}AllFields(bean,values);break;')
+                  ' case ${e.clsType_} : ${_invokerP}set${e.clsType}AllFields(bean,values,canThrowException);break;')
               .fold('', (p, e) => p + e),
+      'typeAdapters': scanTypeAdapter()
+          .map((e) => "'${e.uri}'")
+          .fold<String>('', (p, e) => '' == p ? e : '$p,$e'),
+      'initializers': scanInitializer()
+          .map((e) => "'${e.uri}'")
+          .fold<String>('', (p, e) => '' == p ? e : '$p,$e'),
     });
 
 String genBeanFactoryExportLibCode(
@@ -120,6 +127,22 @@ genBeanFactoryInvokerCode() {
           ? "import '${item.key}';"
           : "import '${item.key}' as ${item.value} ;")
       .fold("", (i, n) => i + n);
+
+  result += '''
+  Map<String, dynamic> _genParams(
+    dynamic param, Map<String, String> uriParams, String putKey) {
+  Map<String, dynamic> params = Map.from(uriParams);
+  bool f = param != null && param is Map<String, dynamic>;
+  if (param != null) {
+    if (param is Map<String, dynamic>) {
+      params.addAll(param);
+    } else {
+      params[putKey] = param;
+    }
+  }
+  return params;
+}''';
+
   beanSysCreatorMap.addAll(beanMap.map((k, v) => MapEntry(
       k,
       GBeanCreator(
@@ -170,8 +193,9 @@ String _genClassCreator(GBean bean) {
 class ${bean.clsType}SysCreator extends BeanCustomCreatorBase<${bean.clsType_}> {
   @override
   ${bean.clsType_} create(
-      String namedConstructorInUri, Map<String, dynamic> mapParam, objectParam) {
-       ${_generateBeanInstanceSwitchConstructor(bean, 'namedConstructorInUri', 'mapParam', 'objectParam')}
+      String namedConstructorInUri, dynamic param,
+      Map<String, String> uriParams, bool canThrowException) {
+       ${_generateBeanInstanceSwitchConstructor(bean, 'namedConstructorInUri', 'mapParam', 'objectParam', 'canThrowException')}
   }
 }
     """;
@@ -179,19 +203,21 @@ class ${bean.clsType}SysCreator extends BeanCustomCreatorBase<${bean.clsType_}> 
 
 String _genMethodInvoke(GBean bean) {
   return """
-dynamic invoke${bean.clsType}Methods(${bean.clsType_} bean , String methodName , {Map<String, dynamic> params}){
-   ${_generateBeanMethodInvokerSwitch(bean, 'methodName', 'bean', 'params')}
-    throw NoSuchMethodException(${bean.clsType_} , methodName);
+dynamic invoke${bean.clsType}Methods(${bean.clsType_} bean , String methodName , Map<String, dynamic> params, bool canThrowException){
+   ${_generateBeanMethodInvokerSwitch(bean, 'methodName', 'bean', 'params', 'canThrowException')}
+   if (canThrowException)
+   throw NoSuchMethodException(${bean.clsType_} , methodName);
 }
     """;
 }
 
 String _genFieldGet(GBean bean) {
   return """
-dynamic get${bean.clsType}Fields(${bean.clsType_} bean , String fieldName){
+dynamic get${bean.clsType}Fields(${bean.clsType_} bean , String fieldName, bool canThrowException){
     switch (fieldName) {
         ${bean.fields.map((e) => e.value).map((m) => "case '${m.fieldNameKey}' : return bean.${m.fieldName};").reduce((v, e) => v + e)}
     }
+    if (canThrowException)
     throw NoSuchFieldException(${bean.clsType_} , fieldName);
 }
     """;
@@ -199,18 +225,29 @@ dynamic get${bean.clsType}Fields(${bean.clsType_} bean , String fieldName){
 
 String _genFieldSet(GBean bean) {
   return """
-void set${bean.clsType}Fields(${bean.clsType_} bean , String fieldName , dynamic value){
+void set${bean.clsType}Fields(${bean.clsType_} bean , String fieldName , dynamic value,  canThrowException ){
     switch (fieldName) {
-        ${bean.fields.map((e) => e.value).map((m) => "case '${m.fieldNameKey}' : bean.${m.fieldName}=value; break;").reduce((v, e) => v + e)}
+        ${bean.fields.map((e) => e.value).map((f) => "case '${f.fieldNameKey}' : ${_genFieldSetTypeChecker(bean, f)} break;").reduce((v, e) => v + e)}
     }
+    if (canThrowException)
     throw NoSuchFieldException(${bean.clsType_} , fieldName);
 }
     """;
 }
 
+String _genFieldSetTypeChecker(GBean bean, GBeanField field) {
+  return '''
+  if(BeanFactory.hasTypeAdapterS2Value<${field.fieldType}>(value)){ 
+    bean.${field.fieldName}= BeanFactory.convertTypeS(value);
+  }else if (canThrowException){
+    throw IllegalArgumentException(${bean.clsType_} , fieldName,[Pair('${field.fieldName}',${field.fieldType})],[Pair('${field.fieldNameKey}',value.runtimeType)]);
+  }
+  ''';
+}
+
 String _genFieldGets(GBean bean) {
   return """
-Map<String,dynamic> get${bean.clsType}AllFields(${bean.clsType_} bean){
+Map<String,dynamic> get${bean.clsType}AllFields(${bean.clsType_} bean, bool canThrowException){
     Map<String,dynamic> result={};
     ${bean.fields.map((e) => e.value).map((e) => "result['${e.fieldNameKey}']=bean.${e.fieldName};").reduce((v, e) => v + e)}
     return result;
@@ -220,16 +257,20 @@ Map<String,dynamic> get${bean.clsType}AllFields(${bean.clsType_} bean){
 
 String _genFieldSets(GBean bean) {
   return """
-void set${bean.clsType}AllFields(${bean.clsType_} bean , Map<String,dynamic> values){
-    ${bean.fields.map((e) => e.value).map((e) => "if (values.containsKey('${e.fieldNameKey}')) { set${bean.clsType}Fields(bean,'${e.fieldNameKey}',values['${e.fieldNameKey}']); }").reduce((v, e) => v + e)}
+void set${bean.clsType}AllFields(${bean.clsType_} bean , Map<String,dynamic> values, bool canThrowException){
+    ${bean.fields.map((e) => e.value).map((e) => "if (values.containsKey('${e.fieldNameKey}')) { set${bean.clsType}Fields(bean,'${e.fieldNameKey}',values['${e.fieldNameKey}'], canThrowException); }").reduce((v, e) => v + e)}
 }
     """;
 }
 
 ////一下是根据不同的参数确定不同的使用不同的构造函数
 
-String _generateBeanInstanceSwitchConstructor(GBean bean,
-    String namedConstructorInUri, String paramsMapName, String objParamName) {
+String _generateBeanInstanceSwitchConstructor(
+    GBean bean,
+    String namedConstructorInUri,
+    String paramsMapName,
+    String objParamName,
+    String canThrowExceptionName) {
   StringBuffer stringBuffer = StringBuffer();
   stringBuffer.writeln("${bean.clsType_} beanInstance;");
   stringBuffer.writeln("  switch ($namedConstructorInUri) {");
@@ -243,29 +284,72 @@ String _generateBeanInstanceSwitchConstructor(GBean bean,
 
     stringBuffer.writeln("    case '${constructor.namedConstructorInUri}' :");
     stringBuffer.writeln("");
-    List<String> gpsccnp = _generateBeanSwitchConstructorCheckNumParamsInstance(
-            constructor, paramsMapName, objParamName, resultStr, newBeanCMD)
-        .where((ifStr) => ifStr != "")
-        .toList();
-    if (gpsccnp.length > 0) {
-      gpsccnp.forEach((s) {
-        stringBuffer.writeln("$s else ");
-      });
-
-      stringBuffer.writeln("{");
-      //当所有条件都不满足时 但路由有无参的构造函数 时使用无参的构造函数来 创建
-      if (constructor.params.length == 0 || constructor.canCreateForNoParams) {
-        stringBuffer.write(_generateBeanConstructorOrFunctionParams(
-            resultStr, newBeanCMD, [], []));
-      }
-      stringBuffer.writeln("        }");
+    if (constructor.params.length == 0) {
+      stringBuffer.writeln("$resultStr=$newBeanCMD();");
+    } else if (constructor.isFor2Params) {
+      //暂未测试
+      var cmd = _generateBeanConstructorOrFunctionParams(
+          resultStr,
+          newBeanCMD,
+          constructor.params.map((e) => e.value).toList(),
+          ['param', 'uriParams']);
+      stringBuffer.writeln(cmd);
+    } else {
+      stringBuffer.writeln(
+          "Map<String, dynamic> params =  _genParams(param, uriParams, '${constructor.params[0].value.keyInMaps}');");
+      stringBuffer.writeln(generateBeanConstructorOrFunctionParamsForMapSwitch(
+          resultStr,
+          newBeanCMD,
+          constructor.params.map((pair) => pair.value).toList(),
+          'params',
+          "if (canThrowException) throw IllegalArgumentException(${bean.clsType_}, '${namedConstructorInUri}',"
+              " [${constructor.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.paramTypeNoParamInfo})").fold('', (p, e) => p == '' ? e : "$p,$e")}], "
+              "params.entries.map((e)=>Pair(e.key, e.value.runtimeType)).toList());"));
+//  "[${m.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.paramType})").fold('', (p, e) => p == '' ? e : "$p,$e")}],"
+//                " $paramsMapName.entries.map((e)=>Pair(e.key, e.value.runtimeType)).toList());"
+//      List<String> gpsccnp =
+//          _generateBeanSwitchConstructorCheckNumParamsInstance(
+//                  constructor,
+//                  paramsMapName,
+//                  objParamName,
+//                  resultStr,
+//                  newBeanCMD,
+//                  canThrowExceptionName)
+//              .where((ifStr) => ifStr != "")
+//              .toList();
+//      if (gpsccnp.length > 0) {
+//        gpsccnp.forEach((s) {
+//          stringBuffer.writeln("$s else ");
+//        });
+//
+//        stringBuffer.writeln("{");
+//        //当所有条件都不满足时 但路由有无参的构造函数 时使用无参的构造函数来 创建
+//        if (constructor.params.length == 0 ||
+//            constructor.canCreateForNoParams) {
+//          stringBuffer.write(_generateBeanConstructorOrFunctionParams(
+//              resultStr, newBeanCMD, [], []));
+//        } else {
+//          stringBuffer.writeln("if($canThrowExceptionName) ");
+////        stringBuffer.writeln(
+////            "throw IllegalArgumentException(${bean.clsType_} , $namedConstructorInUri,"
+////            "[${constructor.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.type.dartType.element.name})").reduce((v, e) => "$v,$e")}], "
+////            "$paramsMapName.entries.map((e)=>Pair(e.key, e.value.runtimeType)).toList());");
+//          stringBuffer.writeln(
+//              "throw IllegalArgumentException(${bean.clsType_} , $namedConstructorInUri,"
+//              "[${constructor.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.type.dartType.element.name})").reduce((v, e) => "$v,$e")}], "
+//              "[]);");
+//        }
+//        stringBuffer.writeln("        }");
+//      }
     }
-    stringBuffer.writeln("");
-    stringBuffer.writeln("");
-    stringBuffer.writeln("");
     stringBuffer.writeln("      break;");
   });
+  stringBuffer.writeln('default:');
+  stringBuffer.writeln("if($canThrowExceptionName) ");
+  stringBuffer.writeln(
+      "throw BeanNotFoundException('${bean.uri}.' + $namedConstructorInUri) ;");
   stringBuffer.writeln("  }");
+
   stringBuffer.writeln("return beanInstance;");
   return stringBuffer.toString();
 }
@@ -275,8 +359,10 @@ List<String> _generateBeanSwitchConstructorCheckNumParamsInstance(
     String paramsMapName,
     String objParamName,
     String resultStr,
-    String newBeanCMD) {
+    String newBeanCMD,
+    String canThrowExceptionName) {
   List<String> result = [];
+
   //无参构造函数
   if (constructor.canCreateForNoParams) {
     result.add(
@@ -483,13 +569,13 @@ List<String> _generateBeanSwitchConstructorCheckNumParamsInstance(
           !(constructor.params[0].value.isTypeDartCoreMap &&
               "" == constructor.params[0].value.key))) {
     result.add(
-        "if($paramsMapName!=null) {${generateBeanConstructorOrFunctionParamsForMapSwitch(resultStr, newBeanCMD, constructor.params.map((pair) => pair.value).toList(), paramsMapName)}\n}");
+        "if($paramsMapName!=null) {${generateBeanConstructorOrFunctionParamsForMapSwitch(resultStr, newBeanCMD, constructor.params.map((pair) => pair.value).toList(), paramsMapName, '')}\n}");
   }
   return result;
 }
 
-String _generateBeanMethodInvokerSwitch(
-    GBean bean, String methodName, String beanName, String paramsMapName) {
+String _generateBeanMethodInvokerSwitch(GBean bean, String methodName,
+    String beanName, String paramsMapName, String canThrowExceptionName) {
   StringBuffer stringBuffer = StringBuffer();
   stringBuffer.writeln("  switch ($methodName) {");
   bean.methods.map((e) => e.value).forEach((m) {
@@ -499,21 +585,21 @@ String _generateBeanMethodInvokerSwitch(
         "$beanName.${m.methodName}",
         m.params.map((e) => e.value).toList(),
         paramsMapName,
+        m.params.length == 0
+            ? ''
+            : "if($canThrowExceptionName) throw IllegalArgumentException(${bean.clsType_},'${m.methodName}', "
+                "[${m.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.paramTypeNoParamInfo})").fold('', (p, e) => p == '' ? e : "$p,$e")}],"
+                " $paramsMapName.entries.map((e)=>Pair(e.key, e.value.runtimeType)).toList());",
         cmdAfter: [m.isResultVoid ? 'return ;' : 'return result;']);
     stringBuffer.writeln(ifStr);
-    if (ifStr.trimLeft().startsWith("if")) {
-      stringBuffer.writeln(
-          "throw IllegalArgumentException(${bean.clsType_},'${m.methodName}', [${m.params.map((e) => "Pair('${e.value.keyInMaps}',${e.value.paramType})").reduce((v, e) => "$v,$e")}], $paramsMapName.entries.map((e)=>Pair(e.key, e.value.runtimeType)).toList()); ");
-    } else {
-      stringBuffer.writeln("break;");
-    }
+    stringBuffer.writeln("break;");
   });
   stringBuffer.writeln("  }");
   return stringBuffer.toString();
 }
 
-String generateBeanConstructorOrFunctionParamsForMapSwitch(
-    String resultStr, String CMD, List<GBeanParam> params, String paramsMapName,
+String generateBeanConstructorOrFunctionParamsForMapSwitch(String resultStr,
+    String CMD, List<GBeanParam> params, String paramsMapName, String finalElse,
     {List<String> cmdAfter = const []}) {
   List<GBeanParam> paramsNamed = params.where((p) => p.isNamed).toList();
 
@@ -521,55 +607,66 @@ String generateBeanConstructorOrFunctionParamsForMapSwitch(
       .where((p) => !p.isNamed)
       .map((p) => _IFGenerator(p, paramsMapName, isSelect: true))
       .toList();
-  List<_IFGenerator> noParamsNeedCanRun;
+//  List<_IFGenerator> noParamsNeedCanRun;
 
-  String ifsStr = _combination(paramsNamed, paramsMapName)
-      .where((list) {
-        dynamic no = findFistWhere(list, (p) => p.isSelect);
-
-        if (no == null) {
-          noParamsNeedCanRun = list;
-        }
-
-        return no != null;
-      })
-      .map((list) {
-        List<_IFGenerator> r = cloneList(paramsNeed, (ifg) => ifg.clone());
-        r.addAll(list);
-        return r;
-      })
+  List<List<_IFGenerator>> ifGenerators =
+      _combination(paramsNamed, paramsMapName);
+  String ifsStr = ifGenerators
+//      .where((list) {
+//        dynamic no = findFistWhere(list, (p) => p.isSelect);
+//        if (no == null) {
+//          noParamsNeedCanRun = list;
+//        }
+//        return no != null;
+//      })
+      .map((e) =>
+          cloneList<_IFGenerator>(paramsNeed, (ifg) => ifg.clone())..addAll(e))
+//      .map((list) {
+//        List<_IFGenerator> r = cloneList(paramsNeed, (ifg) => ifg.clone());
+//        r.addAll(list);
+//        return r;
+//      })
       .map((list) => _generateBeanConstructorOrFunctionParamsForMapSwitchIf(
           resultStr, CMD, list,
           cmdAfter: cmdAfter))
       .where((str) => "" != str)
-      .map((ifs) => "\n$ifs else ")
+      .map((ifs) => ifs.trimRight().endsWith("}") ? "\n$ifs else " : ifs)
       .fold("", (i, s) => "$i$s");
 
   if (ifsStr.trimRight().endsWith("else")) {
     ifsStr = ifsStr.substring(0, ifsStr.length - 6);
   }
+  if (ifsStr.trimRight().endsWith("}")) {
+    ifsStr += 'else {$finalElse}';
+  }
 
   ////需要单独处理 当named参数全不选时的状况
-  if (noParamsNeedCanRun != null) {
-    if (paramsNeed.length == 0) {
-      if (ifsStr.trimLeft().startsWith("if")) {
-        ifsStr +=
-            "else {${_generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [], cmdAfter: cmdAfter)}}";
-      } else {
-        ifsStr +=
-            "${_generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [], cmdAfter: cmdAfter)}";
-      }
-    } else {
-      if (ifsStr.trimLeft().startsWith("if")) {
-        ifsStr +=
-            "else ${_generateBeanConstructorOrFunctionParamsForMapSwitchIf(resultStr, CMD, paramsNeed, cmdAfter: cmdAfter)}";
-      } else {
-        ifsStr += _generateBeanConstructorOrFunctionParamsForMapSwitchIf(
-            resultStr, CMD, paramsNeed,
-            cmdAfter: cmdAfter);
-      }
-    }
-  }
+//  if (noParamsNeedCanRun != null) {
+//    if (paramsNeed.length == 0) {
+//      if (ifsStr.trimLeft().startsWith("if")) {
+//        ifsStr +=
+//            "else {${_generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [], cmdAfter: cmdAfter)}}";
+//      } else {
+//        ifsStr +=
+//            "${_generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [], cmdAfter: cmdAfter)}";
+//      }
+//    } else {
+//      if (ifsStr.trimLeft().startsWith("if")) {
+//        ifsStr +=
+//            "else ${_generateBeanConstructorOrFunctionParamsForMapSwitchIf(resultStr, CMD, paramsNeed, cmdAfter: cmdAfter)}";
+//      } else {
+//        ifsStr += _generateBeanConstructorOrFunctionParamsForMapSwitchIf(
+//            resultStr, CMD, paramsNeed,
+//            cmdAfter: cmdAfter);
+//      }
+//    }
+//  } else {
+//    if (ifsStr.trimLeft().startsWith("if")) {
+//      ifsStr += "else {$onCannotRunThrow}";
+//    } else {
+//      ifsStr += "$onCannotRunThrow";
+//    }
+//  }
 
   return (ifsStr);
 }
@@ -577,6 +674,9 @@ String generateBeanConstructorOrFunctionParamsForMapSwitch(
 String _generateBeanConstructorOrFunctionParamsForMapSwitchIf(
     String resultStr, String CMD, List<_IFGenerator> params,
     {List<String> cmdAfter = const []}) {
+  if (params.isEmpty)
+    return _generateBeanConstructorOrFunctionParams(resultStr, CMD, [], [],
+        cmdAfter: cmdAfter);
   BoxThree<String, List<String>, String> bt = params
 //        .where((ifg) => ifg.isSelect)
       .map((ifg) => BoxThree(ifg.whereStr, ifg.contentStr, ifg.otherContentStr))
@@ -587,8 +687,23 @@ String _generateBeanConstructorOrFunctionParamsForMapSwitchIf(
     return i;
   });
 
+  if (bt.a.trim().isEmpty) {
+    return bt.c.trim() +
+        '\n' +
+        _generateBeanConstructorOrFunctionParams(
+            resultStr,
+            CMD,
+            params
+                .where((ifg) => ifg.isSelect)
+                .map((ifg) => ifg.param)
+                .toList(),
+            bt.b,
+            cmdAfter: cmdAfter);
+  }
+
   String r =
-      "if (${bt.a.trimRight().endsWith("&&") ? bt.a.substring(0, bt.a.length - 3) : bt.a} ) { ${bt.c.trim()} \n ${_generateBeanConstructorOrFunctionParams(resultStr, CMD, params.where((ifg) => ifg.isSelect).map((ifg) => ifg.param).toList(), bt.b, cmdAfter: cmdAfter)} \n }";
+      "if (${bt.a.trimRight().endsWith("&&") ? bt.a.substring(0, bt.a.length - 3) : bt.a} ) {"
+      " ${bt.c.trim()} \n ${_generateBeanConstructorOrFunctionParams(resultStr, CMD, params.where((ifg) => ifg.isSelect).map((ifg) => ifg.param).toList(), bt.b, cmdAfter: cmdAfter)} \n }";
 
   return r;
 }
@@ -601,31 +716,41 @@ List<GBeanParam> _cloneListParams(List<GBeanParam> source) {
 //相比穷举的快速生成方案 参考自来源https://zhenbianshu.github.io/2019/01/charming_alg_permutation_and_combination.html
 List<List<_IFGenerator>> _combination(
     List<GBeanParam> source, String paramsMapName) {
-  List<List<_IFGenerator>> result = [<_IFGenerator>[]];
-
-  //将所有的参数全必选的选项加入到返回结果中
-  result.add(_cloneListParams(source)
-      .map((p) => _IFGenerator(p, paramsMapName, isSelect: true))
-      .toList(growable: true));
-
-  for (int i = 1; i < Math.pow(2, source.length) - 1; i++) {
-//      Set<RoutePageParam> eligibleCollections = Set();
+  List<List<_IFGenerator>> result = [];
+  for (int l = 0, i = Math.pow(2, source.length) - 1; i >= l; i--) {
     List<_IFGenerator> paras = _cloneListParams(source)
         .map((p) => _IFGenerator(p, paramsMapName))
-        .toList(growable: true);
-    // 依次将数字 i 与 2^n 按位与，判断第 n 位是否为 1
-    for (int j = 0; j < source.length; j++) {
-      if ((i & Math.pow(2, j).toInt()) == Math.pow(2, j)) {
-        //          eligibleCollections.add(source[j]);
+        .toList();
+    for (int j = 0, m = source.length - 1; j <= m; j++) {
+      if ((i >> (m - j)) & 0x01 == 0x01) {
         paras[j].isSelect = true;
-      } else {}
+      }
     }
     result.add(paras);
   }
+
+  //将所有的参数全必选的选项加入到返回结果中
+//  result.add(_cloneListParams(source)
+//      .map((p) => _IFGenerator(p, paramsMapName, isSelect: true))
+//      .toList(growable: true));
+//  for (int i = 1; i < Math.pow(2, source.length) - 1; i++) {
+////      Set<RoutePageParam> eligibleCollections = Set();
+//    List<_IFGenerator> paras = _cloneListParams(source)
+//        .map((p) => _IFGenerator(p, paramsMapName))
+//        .toList();
+//    // 依次将数字 i 与 2^n 按位与，判断第 n 位是否为 1
+//    for (int j = 0; j < source.length; j++) {
+//      if ((i & Math.pow(2, j).toInt()) == Math.pow(2, j)) {
+//        //          eligibleCollections.add(source[j]);
+//        paras[j].isSelect = true;
+//      } else {}
+//    }
+//    result.add(paras);
+//  }
   //将所有的参数全不选的选项加入到返回结果中
-  result.add(_cloneListParams(source)
-      .map((p) => _IFGenerator(p, paramsMapName))
-      .toList(growable: true));
+//  result.add(_cloneListParams(source)
+//      .map((p) => _IFGenerator(p, paramsMapName))
+//      .toList(growable: true));
   return result;
 }
 
@@ -703,43 +828,45 @@ class _IFGenerator {
   String get whereStr {
     if (!isSelect) return "!$paramsMapName.containsKey('${param.keyInMaps}')";
     String w = "";
-    if ("String" == param.paramType) {
-      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
-          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} "
-          "|| $paramsMapName['${param.keyInMaps}'] is num || $paramsMapName['${param.keyInMaps}'] is bool))";
-    } else if ("int" == param.paramType) {
-      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
-          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
-    } else if ("double" == param.paramType) {
-      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
-          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
-    } else if ("bool" == param.paramType) {
-      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
-          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
-    } else {
-      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
-          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType}))";
-    }
+//    if ("String" == param.paramType) {
+//      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+//          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} "
+//          "|| $paramsMapName['${param.keyInMaps}'] is num || $paramsMapName['${param.keyInMaps}'] is bool))";
+//    } else if ("int" == param.paramType) {
+//      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+//          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
+//    } else if ("double" == param.paramType) {
+//      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+//          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
+//    } else if ("bool" == param.paramType) {
+//      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+//          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType} || $paramsMapName['${param.keyInMaps}'] is String))";
+//    } else {
+//      w = "($paramsMapName.containsKey('${param.keyInMaps}') && "
+//          "($paramsMapName['${param.keyInMaps}'] is ${param.paramType}))";
+//    }
+    w = "($paramsMapName.containsKey('${param.keyInMaps}') && BeanFactory.hasTypeAdapterS2Value<${param.paramType}>($paramsMapName['${param.keyInMaps}']))";
     return w;
   }
 
   String get contentStr {
     if (!isSelect) return "";
     String c = "";
-    if ("String" == param.paramType) {
-      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : $paramsMapName['${param.keyInMaps}'].toString()";
-    } else if ("int" == param.paramType) {
-      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
-          "(int.parse( $paramsMapName['${param.keyInMaps}']) )";
-    } else if ("double" == param.paramType) {
-      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
-          "(double.parse( $paramsMapName['${param.keyInMaps}']) )";
-    } else if ("bool" == param.paramType) {
-      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
-          "('true'==$paramsMapName['${param.keyInMaps}'] ? true : false )";
-    } else {
-      c = "$paramsMapName['${param.keyInMaps}'] as ${param.paramType}";
-    }
+//    if ("String" == param.paramType) {
+//      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : $paramsMapName['${param.keyInMaps}'].toString()";
+//    } else if ("int" == param.paramType) {
+//      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
+//          "(int.parse( $paramsMapName['${param.keyInMaps}']) )";
+//    } else if ("double" == param.paramType) {
+//      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
+//          "(double.parse( $paramsMapName['${param.keyInMaps}']) )";
+//    } else if ("bool" == param.paramType) {
+//      c = "$paramsMapName['${param.keyInMaps}'] is ${param.paramType} ? $paramsMapName['${param.keyInMaps}'] as ${param.paramType} : "
+//          "('true'==$paramsMapName['${param.keyInMaps}'] ? true : false )";
+//    } else {
+//      c = "$paramsMapName['${param.keyInMaps}'] as ${param.paramType}";
+//    }
+    c = "BeanFactory.convertTypeS($paramsMapName['${param.keyInMaps}'])";
     return c;
   }
 

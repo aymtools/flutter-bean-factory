@@ -158,8 +158,10 @@ class Init extends Builder {
             isGenLibExport: isGenLibExport);
       }
     }
-    if (factory != null)
+    if (factory != null) {
       setBeanFactory(factory, buildStep.inputId.uri, buildStep.inputId.package);
+      await _init(buildStep);
+    }
   }
 
   @override
@@ -167,15 +169,29 @@ class Init extends Builder {
         'beanfactory.dart': ['.init.bf.aymtools.dart'],
         'bf.dart': ['.init.bf.aymtools.dart']
       };
+
+  Future<void> _init(BuildStep buildStep) async {
+    await scanLibrary(buildStep, 'bean_factory');
+//    try {
+//      AssetId assetId =
+//          AssetId('bean_factory', "lib/src/com/aymtools/beanfactory/core.dart");
+//      var lib = await buildStep.resolver.libraryFor(assetId);
+//      scan(LibraryReader(lib));
+//    } catch (e) {
+//      print("Cann't load bean_factory library!! \n $e");
+//    }
+  }
 }
 
 class Scan extends Builder {
   @override
   FutureOr<void> build(BuildStep buildStep) async {
-    if (buildStep.inputId.uri.toString().startsWith('asset:') ||
-        buildStep.inputId.uri.toString().endsWith('.aymtools.dart') ||
-        buildStep.inputId.uri.toString().endsWith('beanfactory.dart'))
-      return null;
+    String inputUri = buildStep.inputId.uri.toString();
+    if (inputUri.startsWith('package:bean_factory/src/') ||
+        inputUri.startsWith('package:bean_factory_generator/src/') ||
+        inputUri.startsWith('asset:') ||
+        inputUri.endsWith('.aymtools.dart') ||
+        inputUri.endsWith('beanfactory.dart')) return null;
 
     String pack = buildStep.inputId.package;
     if (isNeedScanPackage(pack) ||
@@ -224,15 +240,14 @@ class Gen extends Builder {
   void _importLibs(BuildStep buildStep) async {
     List<String> otherLibs = config.importLibsName;
     for (String libPackageName in otherLibs) {
-      try {
-        AssetId assetId = AssetId(libPackageName, "lib/$libPackageName.dart");
-        var lib = await buildStep.resolver.libraryFor(assetId);
-        await lib.exportedLibraries
-            .where((element) => !element.isInSdk)
-            .forEach((element) => scan(LibraryReader(element)));
-      } catch (e) {
-        print("Cann't load ${libPackageName} library!! \n $e");
-      }
+      await scanLibrary(buildStep, libPackageName);
+//      try {
+//        AssetId assetId = AssetId(libPackageName, "lib/$libPackageName.dart");
+//        var lib = await buildStep.resolver.libraryFor(assetId);
+//        await scanExportedLibrary(lib);
+//      } catch (e) {
+//        print("Cann't load ${libPackageName} library!! \n $e");
+//      }
     }
   }
 
@@ -261,8 +276,10 @@ class Gen extends Builder {
     String filePath = buildStep.inputId.path;
     filePath = filePath.substring(0, filePath.lastIndexOf("/"));
     filePath = "$filePath/beanfactory.sys.aymtools.dart";
-    await buildStep.writeAsString(AssetId(runWithPackageName, filePath),
+    await buildStep.writeAsString(
+        AssetId(runWithPackageName, filePath),
         writeDartFileFormatter.format(genBeanFactoryInvokerCode()));
+//        genBeanFactoryInvokerCode());
   }
 
   void _genFactory(BuildStep buildStep) async {

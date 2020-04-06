@@ -148,6 +148,11 @@ MapEntry<String, String> parseAddImport(DartType type) {
   if ("dart.core" == typeLibraryName || type.element.library.isDartCore) {
     return MapEntry("", "");
   }
+  if (type is ParameterizedType) {
+    ParameterizedType parameterizedType = type;
+    parameterizedType.typeArguments
+        .forEach((element) => parseAddImport(element));
+  }
   return parseAddImports(type.element.librarySource.uri.toString());
 }
 
