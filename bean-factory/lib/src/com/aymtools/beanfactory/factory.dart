@@ -241,6 +241,7 @@ class BeanFactory implements IBeanFactory {
 
   To convertType<To>(dynamic from) {
     if (from == null) return null;
+    if (from is To) return from;
     Type fromType = from.runtimeType;
     if (fromType == To) {
       return from as To;
@@ -260,8 +261,9 @@ class BeanFactory implements IBeanFactory {
   static bool hasTypeAdapterS2<To>(Type from) =>
       instance.hasTypeAdapter(from, To);
 
-  static bool hasTypeAdapterS2Value<To>(dynamic fromValue) =>
-      fromValue == null ? true : hasTypeAdapterS2<To>(fromValue.runtimeType);
+  static bool hasTypeAdapterS2Value<To>(dynamic fromValue) => fromValue == null
+      ? true
+      : (fromValue is To) || hasTypeAdapterS2<To>(fromValue.runtimeType);
 
   static bool hasTypeAdapterS3<From, To>() => instance.hasTypeAdapter(From, To);
 

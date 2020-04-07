@@ -144,14 +144,30 @@ final Map<String, String> _imports = {
 Map<String, String> get imports => Map.from(_imports);
 
 MapEntry<String, String> parseAddImport(DartType type) {
+  if (type.isDartCoreMap ||
+      type.isDynamic ||
+      type.isVoid ||
+      type.isBottom ||
+      type.isObject ||
+      type.isDartAsyncFuture ||
+      type.isDartAsyncFutureOr ||
+      type.isDartCoreBool ||
+      type.isDartCoreDouble ||
+      type.isDartCoreFunction ||
+      type.isDartCoreInt ||
+      type.isDartCoreList ||
+      type.isDartCoreNull ||
+      type.isDartCoreNum ||
+      type.isDartCoreObject ||
+      type.isDartCoreString ||
+      type.isDartCoreSymbol ||
+      type.isDartCoreSet) return MapEntry("", "");
   String typeLibraryName = type.element.library.name;
   if ("dart.core" == typeLibraryName || type.element.library.isDartCore) {
     return MapEntry("", "");
   }
   if (type is ParameterizedType) {
-    ParameterizedType parameterizedType = type;
-    parameterizedType.typeArguments
-        .forEach((element) => parseAddImport(element));
+    type.typeArguments.forEach((element) => parseAddImport(element));
   }
   return parseAddImports(type.element.librarySource.uri.toString());
 }

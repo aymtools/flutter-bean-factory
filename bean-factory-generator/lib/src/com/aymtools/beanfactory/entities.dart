@@ -15,165 +15,103 @@ class _Tag {
 
   String get elementName => element == null ? '' : element.name;
 
-  String get key =>
-      _key != null
-          ? _key
-          : _key = annotation.isNull ||
-          annotation
-              .peek('key')
-              .isNull ||
-          annotation
-              .peek('key')
-              .stringValue
-              .isEmpty
+  String get key => _key != null
+      ? _key
+      : _key = annotation.isNull ||
+              annotation.peek('key').isNull ||
+              annotation.peek('key').stringValue.isEmpty
           ? ''
-          : annotation
-          .peek('key')
-          .stringValue;
+          : annotation.peek('key').stringValue;
 
   String _tag = null;
 
-  String get tag =>
-      _tag != null
-          ? _tag
-          : _tag = annotation.isNull ||
-          annotation
-              .peek('tag')
-              .isNull ||
-          annotation
-              .peek('tag')
-              .stringValue
-              .isEmpty
+  String get tag => _tag != null
+      ? _tag
+      : _tag = annotation.isNull ||
+              annotation.peek('tag').isNull ||
+              annotation.peek('tag').stringValue.isEmpty
           ? ''
-          : annotation
-          .peek('tag')
-          .stringValue;
+          : annotation.peek('tag').stringValue;
 
   int _ext = null;
 
-  int get ext =>
-      _ext != null
-          ? _ext
-          : annotation.isNull || annotation
-          .peek('ext')
-          .isNull
+  int get ext => _ext != null
+      ? _ext
+      : annotation.isNull || annotation.peek('ext').isNull
           ? -1
-          : annotation
-          .peek('ext')
-          .intValue;
+          : annotation.peek('ext').intValue;
 
   int _flag = null;
 
-  int get flag =>
-      _flag != null
-          ? _flag
-          : annotation.isNull || annotation
-          .peek('flag')
-          .isNull
+  int get flag => _flag != null
+      ? _flag
+      : annotation.isNull || annotation.peek('flag').isNull
           ? false
-          : annotation
-          .peek('flag')
-          .boolValue;
+          : annotation.peek('flag').boolValue;
 
   String _tag1 = null;
 
-  String get tag1 =>
-      _tag1 != null
-          ? _tag1
-          : _tag1 = annotation.isNull ||
-          annotation
-              .peek('tag1')
-              .isNull ||
-          annotation
-              .peek('tag1')
-              .stringValue
-              .isEmpty
+  String get tag1 => _tag1 != null
+      ? _tag1
+      : _tag1 = annotation.isNull ||
+              annotation.peek('tag1').isNull ||
+              annotation.peek('tag1').stringValue.isEmpty
           ? ''
-          : annotation
-          .peek('tag1')
-          .stringValue;
+          : annotation.peek('tag1').stringValue;
 
   int _ext1 = null;
 
-  int get ext1 =>
-      _ext1 != null
-          ? _ext1
-          : annotation.isNull || annotation
-          .peek('ext1')
-          .isNull
+  int get ext1 => _ext1 != null
+      ? _ext1
+      : annotation.isNull || annotation.peek('ext1').isNull
           ? -1
-          : annotation
-          .peek('ext1')
-          .intValue;
+          : annotation.peek('ext1').intValue;
 
   int _flag1 = null;
 
-  int get flag1 =>
-      _flag1 != null
-          ? _flag1
-          : annotation.isNull || annotation
-          .peek('flag1')
-          .isNull
+  int get flag1 => _flag1 != null
+      ? _flag1
+      : annotation.isNull || annotation.peek('flag1').isNull
           ? false
-          : annotation
-          .peek('flag1')
-          .boolValue;
+          : annotation.peek('flag1').boolValue;
 
   List<String> _tagList = null;
 
-  List<String> get tagList =>
-      _tagList != null
-          ? _tagList
-          : _tagList = annotation.isNull ||
-          annotation
-              .peek('tagList')
-              .isNull ||
-          annotation
-              .peek('tagList')
-              .listValue
-              .isEmpty
+  List<String> get tagList => _tagList != null
+      ? _tagList
+      : _tagList = annotation.isNull ||
+              annotation.peek('tagList').isNull ||
+              annotation.peek('tagList').listValue.isEmpty
           ? []
           : annotation
-          .peek('tagList')
-          .listValue
-          .map((e) => e.toStringValue())
-          .toList();
+              .peek('tagList')
+              .listValue
+              .map((e) => e.toStringValue())
+              .toList();
 
   List<int> _extList = null;
 
-  List<int> get extList =>
-      _extList != null
-          ? _extList
-          : _extList = annotation.isNull ||
-          annotation
-              .peek('extList')
-              .isNull ||
-          annotation
-              .peek('extList')
-              .listValue
-              .isEmpty
+  List<int> get extList => _extList != null
+      ? _extList
+      : _extList = annotation.isNull ||
+              annotation.peek('extList').isNull ||
+              annotation.peek('extList').listValue.isEmpty
           ? []
           : annotation
-          .peek('extList')
-          .listValue
-          .map((e) => e.toIntValue())
-          .toList();
+              .peek('extList')
+              .listValue
+              .map((e) => e.toIntValue())
+              .toList();
   GType _extType;
 
   GType get extType {
     if (_extType != null) return _extType;
     if (annotation.isNull ||
-        annotation
-            .peek('extType')
-            .isNull ||
-        !annotation
-            .peek('extType')
-            .isType) {
+        annotation.peek('extType').isNull ||
+        !annotation.peek('extType').isType) {
       return null;
     }
-    DartType type = annotation
-        .peek('extType')
-        .typeValue;
+    DartType type = annotation.peek('extType').typeValue;
     MapEntry<String, String> imp = parseAddImport(type);
     _extType = GType(type.element.displayName, imp.key, imp.value, type);
     return _extType;
@@ -184,12 +122,8 @@ class _Tag {
   List<GType> get extTypeList {
     if (_extType != null) return _extTypeList;
     if (annotation.isNull ||
-        annotation
-            .peek('extTypeList')
-            .isNull ||
-        !annotation
-            .peek('extTypeList')
-            .isList) {
+        annotation.peek('extTypeList').isNull ||
+        !annotation.peek('extTypeList').isList) {
       return [];
     }
     _extTypeList = annotation
@@ -206,13 +140,25 @@ class _Tag {
 }
 
 class GType {
-  final String typeName;
+  final String _typeName;
   final String typeLibSourceUri;
   final String typeLibSourceAsStr;
   final DartType dartType;
+  final List<GType> typeArguments;
 
-  GType(this.typeName, this.typeLibSourceUri, this.typeLibSourceAsStr,
-      this.dartType);
+  GType(this._typeName, this.typeLibSourceUri, this.typeLibSourceAsStr,
+      this.dartType)
+      : typeArguments = dartType != null && dartType is ParameterizedType
+            ? dartType.typeArguments
+                .map((e) => e.isDynamic
+                    ? GType('dynamic', '', '', e)
+                    : GType(
+                        e.element.displayName,
+                        e.element.librarySource?.uri?.toString() ?? '',
+                        parseAddImport(e).value,
+                        e))
+                .toList()
+            : [];
 
   bool get isDartCoreBool => dartType.isDartCoreBool;
 
@@ -224,6 +170,13 @@ class GType {
       isDartCoreBool || isDartCoreDouble || isDartCoreInt;
 
   bool get isTypeDartCoreString => dartType.isDartCoreString;
+
+  String get typeAsStrName =>
+      '' == typeLibSourceAsStr ? _TName : "${typeLibSourceAsStr}.${_TName}";
+
+  String get _TName => typeArguments.length == 0
+      ? _typeName
+      : '${dartType.element.displayName}<${typeArguments.map((e) => e.typeAsStrName).reduce((v, e) => '$v,$e')}>';
 }
 
 class GBeanParam extends _Tag {
@@ -233,37 +186,36 @@ class GBeanParam extends _Tag {
 
   final GType type;
 
-  GBeanParam(this.parameterElement,
-      ConstantReader annotation,
-      this.isNamed,
-      String typeLibSourceUri,
-      String typeLibSourceAsStr,
-      String typeName,
-      DartType dartType,)
-      : this.type =
-  GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
+  GBeanParam(
+    this.parameterElement,
+    ConstantReader annotation,
+    this.isNamed,
+    String typeLibSourceUri,
+    String typeLibSourceAsStr,
+    String typeName,
+    DartType dartType,
+  )   : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
         super(parameterElement, annotation);
 
   String get paramName => elementName;
 
   bool get isTypeDartCoreBase =>
       type.dartType.isDartCoreBool ||
-          type.dartType.isDartCoreDouble ||
-          type.dartType.isDartCoreInt;
+      type.dartType.isDartCoreDouble ||
+      type.dartType.isDartCoreInt;
 
   bool get isTypeDartCoreString => type.dartType.isDartCoreString;
 
-  bool get isTypeDartCoreMap =>
-      "" == type.typeLibSourceAsStr && "Map" == type.typeName;
+  bool get isTypeDartCoreMap =>type.dartType.isDartCoreMap;
+//      "" == type.typeLibSourceAsStr &&
+//      "Map" == type.dartType.element.displayName;
 
-  String get paramType =>
-      "" == type.typeLibSourceAsStr
-          ? type.typeName
-          : "${type.typeLibSourceAsStr}.${type.typeName}";
-  String get paramTypeNoParamInfo =>
-      "" == type.typeLibSourceAsStr
-          ? type.dartType.element.name
-          : "${type.typeLibSourceAsStr}.${type.dartType.element.name}";
+  String get paramType => type.typeAsStrName;
+
+  String get paramTypeNoParamInfo => "" == type.typeLibSourceAsStr
+      ? type.dartType.element.displayName
+      : "${type.typeLibSourceAsStr}.${type.dartType.element.displayName}";
 
   String get keyInMaps => "" == key ? paramName : key;
 }
@@ -279,7 +231,8 @@ class GBean extends _Tag {
   final List<Pair<String, GBeanMethod>> methods;
   final List<Pair<String, GBeanField>> fields;
 
-  GBean(this.uri,
+  GBean(
+      this.uri,
       this.classElement,
       ConstantReader annotation,
       String typeName,
@@ -290,21 +243,17 @@ class GBean extends _Tag {
       List<Pair<String, GBeanField>> fields,
       List<Pair<String, GBeanMethod>> methods)
       : this.type =
-  GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
         this.constructors = constructors ?? [],
         this.fields = fields ?? [],
         this.methods = methods ?? [],
         super(classElement, annotation);
 
-  String get clsType =>
-      "" == type.typeLibSourceAsStr
-          ? type.typeName
-          : "${type.typeLibSourceAsStr}${type.typeName}";
+  String get clsType => "" == type.typeLibSourceAsStr
+      ? type.dartType.element.displayName
+      : "${type.typeLibSourceAsStr}${type.dartType.element.displayName}";
 
-  String get clsType_ =>
-      "" == type.typeLibSourceAsStr
-          ? type.typeName
-          : "${type.typeLibSourceAsStr}.${type.typeName}";
+  String get clsType_ => type.typeAsStrName;
 
   String get genByAnnotation => annotation.objectValue.type.getDisplayString();
 
@@ -328,8 +277,8 @@ class GBean extends _Tag {
     } else if (key == null && checkerAnnotation != null) {
       return constructors
           .firstWhere((e) =>
-      e.value.annotation != null &&
-          e.value.annotation.instanceOf(checkerAnnotation))
+              e.value.annotation != null &&
+              e.value.annotation.instanceOf(checkerAnnotation))
           ?.value;
     } else {
       GBeanConstructor field = constructors
@@ -337,8 +286,8 @@ class GBean extends _Tag {
           ?.value;
 
       return field != null &&
-          field.annotation != null &&
-          field.annotation.instanceOf(checkerAnnotation)
+              field.annotation != null &&
+              field.annotation.instanceOf(checkerAnnotation)
           ? field
           : null;
     }
@@ -355,9 +304,9 @@ class GBean extends _Tag {
       methods
           .where((e) => key == null || key == e.value.methodNameKey)
           .where((e) =>
-      checkerAnnotation == null ||
-          (e.value.annotation != null &&
-              e.value.annotation.instanceOf(checkerAnnotation)))
+              checkerAnnotation == null ||
+              (e.value.annotation != null &&
+                  e.value.annotation.instanceOf(checkerAnnotation)))
           .map((e) => e.value)
           .toList();
 
@@ -365,29 +314,27 @@ class GBean extends _Tag {
     if (key == null && checkerAnnotation == null)
       return methods.isEmpty ? null : methods.first.value;
     else if (key != null && checkerAnnotation == null) {
-      return methods
-          .firstWhere((e) => key == e.value.methodNameKey)
-          ?.value;
+      return methods.firstWhere((e) => key == e.value.methodNameKey)?.value;
     } else if (key == null && checkerAnnotation != null) {
       return methods
           .firstWhere((e) =>
-      e.value.annotation != null &&
-          e.value.annotation.instanceOf(checkerAnnotation))
+              e.value.annotation != null &&
+              e.value.annotation.instanceOf(checkerAnnotation))
           ?.value;
     } else
       return methods
           .firstWhere((e) =>
-      key == e.value.methodNameKey &&
-          e.value.annotation != null &&
-          e.value.annotation.instanceOf(checkerAnnotation))
+              key == e.value.methodNameKey &&
+              e.value.annotation != null &&
+              e.value.annotation.instanceOf(checkerAnnotation))
           ?.value;
   }
 
   List<GBeanField> getFields(TypeChecker checkerAnnotation) {
     return fields
         .where((e) =>
-    e.value.annotation != null &&
-        e.value.annotation.instanceOf(checkerAnnotation))
+            e.value.annotation != null &&
+            e.value.annotation.instanceOf(checkerAnnotation))
         .map((e) => e.value)
         .toList();
   }
@@ -396,24 +343,20 @@ class GBean extends _Tag {
     if (key == null && checkerAnnotation == null)
       return null;
     else if (key != null && checkerAnnotation == null) {
-      return fields
-          .firstWhere((e) => key == e.value.fieldNameKey)
-          ?.value;
+      return fields.firstWhere((e) => key == e.value.fieldNameKey)?.value;
     } else if (key == null && checkerAnnotation != null) {
       return fields
           .firstWhere((e) =>
-      e.value.annotation != null &&
-          e.value.annotation.instanceOf(checkerAnnotation))
+              e.value.annotation != null &&
+              e.value.annotation.instanceOf(checkerAnnotation))
           ?.value;
     } else {
       GBeanField field =
-          fields
-              .firstWhere((e) => key == e.value.fieldNameKey)
-              ?.value;
+          fields.firstWhere((e) => key == e.value.fieldNameKey)?.value;
 
       return field != null &&
-          field.annotation != null &&
-          field.annotation.instanceOf(checkerAnnotation)
+              field.annotation != null &&
+              field.annotation.instanceOf(checkerAnnotation)
           ? field
           : null;
     }
@@ -422,7 +365,7 @@ class GBean extends _Tag {
 
 class GBeanConstructor extends _Tag {
   static final TypeChecker _typeCheckerConstructorFor2Params =
-  TypeChecker.fromRuntime(BeanConstructorFor2Params);
+      TypeChecker.fromRuntime(BeanConstructorFor2Params);
 
   final String namedConstructorInUri;
   final ConstructorElement constructorElement;
@@ -443,17 +386,13 @@ class GBeanConstructor extends _Tag {
 
   bool get canCreateForNoParams {
     if (params.length == 0) return true;
-    if (params
-        .where((p) => !p.value.isNamed)
-        .length == 0) return true;
+    if (params.where((p) => !p.value.isNamed).length == 0) return true;
     return false;
   }
 
   bool get canCreateForOneParam {
     if (params.length == 1) return true;
-    if (params
-        .where((p) => !p.value.isNamed)
-        .length == 1) return true;
+    if (params.where((p) => !p.value.isNamed).length == 1) return true;
     return false;
   }
 
@@ -526,14 +465,15 @@ class GBeanField extends _Tag {
 
   final GType type;
 
-  GBeanField(this.fieldElement,
-      this.annotation,
-      String typeLibSourceUri,
-      String typeLibSourceAsStr,
-      String typeName,
-      DartType dartType,)
-      : this.type =
-  GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
+  GBeanField(
+    this.fieldElement,
+    this.annotation,
+    String typeLibSourceUri,
+    String typeLibSourceAsStr,
+    String typeName,
+    DartType dartType,
+  )   : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType),
         super(fieldElement, annotation);
 
   String get fieldName => elementName;
@@ -542,10 +482,7 @@ class GBeanField extends _Tag {
 
   bool get isStatic => fieldElement.isStatic;
 
-  String get fieldType =>
-      "" == type.typeLibSourceAsStr
-          ? type.typeName
-          : "${type.typeLibSourceAsStr}.${type.typeName}";
+  String get fieldType => type.typeAsStrName;
 }
 
 class GBeanCreator {
@@ -558,22 +495,23 @@ class GBeanCreator {
 
   String get genByAnnotation => annotation.objectValue.type.getDisplayString();
 
-  GBeanCreator(this.uri,
-      this.element,
-      this.annotation,
-      String typeName,
-      String typeLibSourceUri,
-      String typeLibSourceAsStr,
-      DartType dartType,) : this.type =
-  GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType);
+  GBeanCreator(
+    this.uri,
+    this.element,
+    this.annotation,
+    String typeName,
+    String typeLibSourceUri,
+    String typeLibSourceAsStr,
+    DartType dartType,
+  ) : this.type =
+            GType(typeName, typeLibSourceUri, typeLibSourceAsStr, dartType);
 
-  String get classNameCode =>
-      '' == type.typeLibSourceAsStr
-          ? type.typeName
-          : "${type.typeLibSourceAsStr}${type.typeName}";
+//  String get classNameCode => '' == type.typeLibSourceAsStr
+//      ? type.typeName
+//      : "${type.typeLibSourceAsStr}${type.typeName}";
+  String get classNameCode => '' == type.typeLibSourceAsStr
+      ? type.dartType.element.displayName
+      : "${type.typeLibSourceAsStr}${type.dartType.element.displayName}";
 
-  String get instantiateCode =>
-      '' == type.typeLibSourceAsStr
-          ? type.typeName
-          : "${type.typeLibSourceAsStr}.${type.typeName}";
+  String get instantiateCode => type.typeAsStrName;
 }

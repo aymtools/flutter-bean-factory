@@ -188,7 +188,7 @@ void _scanBean(Element element, ConstantReader annotation) {
       Pair(
           '',
           e.constructors
-              .where((e) => '' == e.name)
+              .where((e) => '' == e.displayName)
               .map(
                 (e) =>
                 GBeanConstructor(
@@ -210,7 +210,7 @@ void _scanBean(Element element, ConstantReader annotation) {
 
   if (rp.constructors.length == 0) {
     //只有命名构造函数 切没有加上BeanConstructor的注释 表示无法生成此Bean的构造函数
-    beanParseErrorMap[rp.uri] = rp;
+    beanParseErrorMap[uriKey] = rp;
   } else {
     beanMap[uriKey] = rp;
   }
@@ -220,16 +220,16 @@ List<GBeanConstructor> _parseGBeanConstructors(ClassElement element,
     bool scanUsedWhiteList) {
   List<GBeanConstructor> constructors = [];
   element.constructors
-      .where((ele) => !ele.name.startsWith("_"))
+      .where((ele) => !ele.displayName.startsWith("_"))
       .where((ele) =>
   scanUsedWhiteList ||
-      "" == ele.name ||
+      "" == ele.displayName ||
       _beanConstructorNotAnnotation.firstAnnotationOf(ele) == null)
       .forEach((ele) {
     ConstantReader beanConstructor =
     ConstantReader(_beanConstructorAnnotation.firstAnnotationOf(ele));
 
-    if (!beanConstructor.isNull || "" == ele.name || !scanUsedWhiteList) {
+    if (!beanConstructor.isNull || "" == ele.displayName || !scanUsedWhiteList) {
       String keyConstructorName = beanConstructor.isNull ||
           beanConstructor
               .peek("key")
@@ -238,7 +238,7 @@ List<GBeanConstructor> _parseGBeanConstructors(ClassElement element,
               .peek("key")
               .stringValue
               .isEmpty
-          ? ele.name
+          ? ele.displayName
           : beanConstructor
           .peek("key")
           .stringValue;
@@ -264,7 +264,7 @@ List<GBeanConstructor> _parseGBeanConstructors(ClassElement element,
 List<Pair<String, GBeanMethod>> _parseGBeanMethods(ClassElement element,
     bool isScanSuper, bool scanUsedWhiteList) {
   List<Pair<String, GBeanMethod>> result = element.methods
-      .where((e) => !e.name.startsWith('_'))
+      .where((e) => !e.displayName.startsWith('_'))
       .where((ele) =>
   scanUsedWhiteList ||
       _beanMethodNotAnnotation.firstAnnotationOf(ele) == null)
@@ -286,10 +286,10 @@ List<Pair<String, GBeanMethod>> _parseGBeanMethods(ClassElement element,
 List<Pair<String, GBeanField>> _parseGBeanFields(ClassElement element,
     bool isScanSuper, bool scanUsedWhiteList) {
   List<Pair<String, GBeanField>> result = element.fields
-      .where((e) => !e.name.startsWith('_'))
+      .where((e) => !e.displayName.startsWith('_'))
       .where((ele) =>
   scanUsedWhiteList ||
-      "" == ele.name ||
+      "" == ele.displayName ||
       _beanFieldNotAnnotation.firstAnnotationOf(ele) == null)
       .map((e) =>
       BoxThree(

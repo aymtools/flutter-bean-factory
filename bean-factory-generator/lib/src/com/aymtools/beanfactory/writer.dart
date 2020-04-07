@@ -96,7 +96,7 @@ String genBeanFactoryExportLibCode(
     le = [];
   } else {
     String temp = '';
-    if (null == oldContent.name || oldContent.name.isEmpty) {
+    if (null == oldContent.displayName || oldContent.displayName.isEmpty) {
       temp += 'library $packageName;\n';
     }
     temp += oldContent.source.contents.data;
