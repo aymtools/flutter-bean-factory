@@ -3,9 +3,6 @@ const String codeTemplate = """
 {{{importsPath}}}
 {{/imports}}
 
-/// 构造函数中取类型map参数时要慎重，如果未指定参数描述注解 则有可能取得的是uri的query参数亦或者传入的map对象
-/// 所以取类型map参数时 最好注明在所有传入参数中的key  否则不一定会得到什么  优先会传入uri的query参数亦或者传入的map对象
-
 class BeanFactoryInstance implements IBeanFactory{
   BeanFactoryInstance._();
 
